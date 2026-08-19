@@ -24,7 +24,7 @@ This is **not** an HTTP TTS server. The `s2` CLI/server in the submodule is unus
 | `engine/` | ctypes wrapper, dictionaries, download, MP3 concat |
 | `dictionaries/` | default JSON rules (`from` / `to` / `note`) |
 | `s2.cpp/` | **git submodule** — official `https://github.com/rodrigomatta/s2.cpp.git` |
-| `voices/` | bundled `tankvoice.s2voice` |
+| `voices/` | bundled `tankindycast.s2voice` |
 | `flatpak/` | manifest, launch script, prebuilt libs, SPIR-V headers, offline wheels |
 | `lib/` | local plugin copies/symlinks (`make libs` / `make lib-dev`); gitignored |
 
@@ -47,14 +47,21 @@ Set `LD_LIBRARY_PATH` to the library directory **before** `ctypes.CDLL` (native 
 
 `n_gpu_layers`: `-1` for GPU backends, `0` for CPU.
 
+Vulkan `InitializeS2PipelineFromFiles` must pass `codec_follow_backend=0` (CPU codec). Auto-benchmarking the codec onto the GPU creates a second Vulkan context on the same UMA heap; on AMD Radeon 780M / RADV this contributes to `vk::DeviceLostError` during long `eval_cached` runs.
+
+GPU synthesis (Vulkan/CUDA/Metal) runs in a child process (`python -m engine.s2_synth`). ggml `vk::DeviceLostError` calls `terminate()` and cannot be caught in the GUI process. On abort the worker retries the failed line once in a fresh process, then inserts silence and continues. Flatpak launch sets `GGML_VK_DISABLE_COOPMAT=1` and `GGML_VK_ALLOW_SYSMEM_FALLBACK=1` (RADV coopmat DeviceLost on Phoenix).
+
+CPU synthesis stays in the GUI worker thread.
+
 ## ctypes / s2 export API
 
 - `InitializeS2PipelineFromFiles` success is `1`, not `0`
 - `S2Synthesize` success is `> 0` (frame count)
-- Voice clone uses `InitializeAudioPromptCodes`. The C API requires a non-empty reference transcript; GUI does not ask for one — pass `REFERENCE_PROMPT_PLACEHOLDER` (`"."`)
-- Reference voice is optional: checkbox `Использовать пример голоса`. Unchecked → do not pass reference audio
-- Cancel synthesis between lines via `should_cancel` → `SynthesisCancelled`
+- Voice clone loads a bundled or user `.s2voice` profile selected in the main-window **Голос** dropdown. Default item uses the model's built-in voice (no profile). Profile transcripts come from the `.s2voice` file.
+- New profiles are created via **Создать голос** (reference audio + transcript) and saved as user `.s2voice` files
+- Cancel synthesis between lines via `should_cancel` → `SynthesisCancelled`. GPU jobs cancel by terminating the child process
 - Lines like `[pause 500ms]` become silence WAVs, not model calls
+- Vulkan: `codec_follow_backend=0`. GPU jobs use `python -m engine.s2_synth` with `skip_existing` so a DeviceLost abort can resume
 
 ## Qt pitfalls
 
@@ -74,7 +81,7 @@ Closing the settings dialog must cancel an in-flight model download (`DownloadCa
 - models dir: `~/.var/app/com.tagantank.ttser/data/models`
 
 Native tokenizer default: `s2.cpp/tokenizer.json` (migrate old `s2.cpp/models/tokenizer.json`).
-Native voice dir: `voices/` (bundled `voices/tankvoice.s2voice`). Flatpak: `/app/share/ttser/voices`.
+Native voice dir: bundled `voices/tankindycast.s2voice` (native) or `/app/share/ttser/voices` (Flatpak). User-created profiles: same `voices/` on native, `~/.var/app/com.tagantank.ttser/data/voices` on Flatpak.
 
 ## Model download
 

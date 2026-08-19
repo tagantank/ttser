@@ -7,8 +7,9 @@ from pathlib import Path
 
 from PySide6.QtCore import QSettings
 
+from engine.s2_voice import DEFAULT_VOICE_ID, preferred_voice_id, voice_search_dirs
 from ttser.backends import normalize_backend, resolve_library_path
-from ttser.model_catalog import model_by_filename, model_by_id
+from ttser.model_catalog import find_downloaded_model, model_by_filename, model_by_id
 
 
 def default_dictionary_paths() -> list[str]:
@@ -30,6 +31,23 @@ def default_models_dir() -> str:
     if in_flatpak:
         return str(Path.home() / ".var" / "app" / "com.tagantank.ttser" / "data" / "models")
     return "s2.cpp/models"
+
+
+def model_lookup_dirs(models_dir: str | None = None) -> list[str]:
+    dirs = [
+        models_dir or "",
+        default_models_dir(),
+        str(Path.home() / ".var" / "app" / "com.tagantank.ttser" / "data" / "models"),
+        "s2.cpp/models",
+    ]
+    seen: set[str] = set()
+    unique: list[str] = []
+    for item in dirs:
+        if not item or item in seen:
+            continue
+        seen.add(item)
+        unique.append(item)
+    return unique
 
 
 def default_voice_dir() -> str:
@@ -55,8 +73,7 @@ class AppSettings:
     lib_metal: str = "lib/libs2_metal.dylib"
     dictionary_paths: list[str] = field(default_factory=default_dictionary_paths)
     dictionaries_enabled: bool = True
-    reference_voice_enabled: bool = False
-    reference_audio_path: str = ""
+    selected_voice_id: str = DEFAULT_VOICE_ID
 
 
 def _adjust_defaults(settings: AppSettings) -> None:
@@ -96,6 +113,21 @@ def _migrate_tokenizer_path(settings: AppSettings) -> None:
             return
 
 
+def _migrate_model_paths(settings: AppSettings) -> None:
+    model = model_by_id(settings.selected_model_id) or model_by_filename(Path(settings.model_path).name)
+    if model is None:
+        return
+    found = find_downloaded_model(
+        model,
+        settings.model_path,
+        *model_lookup_dirs(settings.models_dir),
+    )
+    if found is None:
+        return
+    settings.model_path = str(found)
+    settings.models_dir = str(found.parent)
+
+
 def load_settings() -> AppSettings:
     q = QSettings("ttser", "ttser")
     in_flatpak = os.environ.get("FLATPAK_ID") == "com.tagantank.ttser"
@@ -105,7 +137,8 @@ def load_settings() -> AppSettings:
     default_cuda = "/app/lib/ttser/libs2_cuda.so" if in_flatpak else "lib/libs2_cuda.so"
     default_metal = "/app/lib/ttser/libs2_metal.dylib" if in_flatpak else "lib/libs2_metal.dylib"
     default_dicts = default_dictionary_paths()
-    reference_audio_path = str(q.value("reference_audio_path", ""))
+    stored_voice_id = q.value("selected_voice_id")
+    legacy_ref_enabled = bool(q.value("reference_voice_enabled", False))
     s = AppSettings(
         backend=q.value("backend", "cpu"),
         vulkan_device=int(q.value("vulkan_device", 0)),
@@ -121,17 +154,16 @@ def load_settings() -> AppSettings:
         lib_metal=q.value("lib_metal", default_metal),
         dictionary_paths=q.value("dictionary_paths", default_dicts),
         dictionaries_enabled=bool(q.value("dictionaries_enabled", True)),
-        reference_voice_enabled=bool(q.value("reference_voice_enabled", bool(reference_audio_path))),
-        reference_audio_path=reference_audio_path,
+        selected_voice_id=DEFAULT_VOICE_ID,
     )
     _adjust_defaults(s)
     _migrate_library_paths(s)
     _migrate_tokenizer_path(s)
+    _migrate_model_paths(s)
     s.backend = normalize_backend(s)
     if not s.selected_model_id or model_by_id(s.selected_model_id) is None:
         matched = model_by_filename(Path(s.model_path).name)
         s.selected_model_id = matched.id if matched else "q8_0"
-    # Migrate old persisted paths when running inside Flatpak.
     if in_flatpak:
         if not Path(s.lib_cpu).is_file():
             s.lib_cpu = default_cpu
@@ -146,8 +178,19 @@ def load_settings() -> AppSettings:
         elif any(not str(path).startswith("/app/") for path in s.dictionary_paths):
             s.dictionary_paths = default_dicts
         if not Path(s.voice_dir).is_dir() or not str(s.voice_dir).startswith("/app/"):
-            if Path("/app/share/ttser/voices/tankvoice.s2voice").is_file():
+            if Path("/app/share/ttser/voices/tankindycast.s2voice").is_file():
                 s.voice_dir = default_voice_dir()
+    search_dirs = [str(path) for path in voice_search_dirs(s.voice_dir)]
+    if stored_voice_id is None or not q.contains("selected_voice_id"):
+        if legacy_ref_enabled:
+            s.selected_voice_id = preferred_voice_id(*search_dirs)
+        else:
+            s.selected_voice_id = DEFAULT_VOICE_ID
+    else:
+        migrated = str(stored_voice_id)
+        if migrated == "tankvoice":
+            migrated = "tankindycast"
+        s.selected_voice_id = preferred_voice_id(*search_dirs, requested=migrated)
     return s
 
 
@@ -167,5 +210,4 @@ def save_settings(s: AppSettings) -> None:
     q.setValue("lib_metal", s.lib_metal)
     q.setValue("dictionary_paths", s.dictionary_paths)
     q.setValue("dictionaries_enabled", s.dictionaries_enabled)
-    q.setValue("reference_voice_enabled", s.reference_voice_enabled)
-    q.setValue("reference_audio_path", s.reference_audio_path)
+    q.setValue("selected_voice_id", s.selected_voice_id)

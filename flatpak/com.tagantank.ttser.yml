@@ -45,7 +45,7 @@ modules:
       - install -Dm644 dictionaries/s2_terms_ru.json /app/share/ttser/dictionaries/s2_terms_ru.json
       - install -Dm644 dictionaries/s2_pronunciation_ru.json /app/share/ttser/dictionaries/s2_pronunciation_ru.json
       - install -d /app/share/ttser/voices
-      - install -Dm644 voices/tankvoice.s2voice /app/share/ttser/voices/tankvoice.s2voice
+      - install -Dm644 voices/tankindycast.s2voice /app/share/ttser/voices/tankindycast.s2voice
     sources:
       - type: dir
         path: ..

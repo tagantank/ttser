@@ -18,10 +18,10 @@ venv/
 # Native plugin copies and lib-dev symlinks
 /lib/
 
-# Models, extra voice profiles, synthesis output
+# Extra user profiles, synthesis output
 *.gguf
 *.s2voice
-!/voices/tankvoice.s2voice
+!/voices/tankindycast.s2voice
 *.part
 /output/
 

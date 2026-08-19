@@ -9,8 +9,8 @@ Agent-oriented notes: [`AGENTS.md`](AGENTS.md). C++ engine: [`s2.cpp/AGENTS.md`]
 - Loads prepared UTF-8 text (`one line = one chunk`)
 - Optionally applies pronunciation dictionaries before synthesis
 - Uses one selected `libs2_*` plugin (`cpu`, `vulkan`, `cuda`, or `metal`)
-- Optionally clones voice from a reference audio file (checkbox in the main window)
-- Can stop synthesis after the current chunk
+- Selects a voice profile from the main window (**Стандартный голос модели**, bundled `tankindycast`, or user `.s2voice` files)
+- Can stop synthesis (GPU jobs terminate the child process)
 - Downloads GGUF models from Hugging Face in Settings, with cancel on dialog close
 - Writes WAV chunks and concatenates a final MP3 (`128k`, needs `ffmpeg`)
 - Lets you add/edit/delete dictionary entries in the GUI
@@ -24,6 +24,7 @@ Only backends whose library file exists are shown in Settings (CPU is always lis
 - Linux: `CPU`, `Vulkan`, `CUDA`
 - macOS: `CPU`, `Metal`
 - Vulkan on macOS (MoltenVK) is not included
+- Vulkan on AMD iGPUs (RADV) keeps the audio codec on CPU and disables ggml coopmat; a GPU device-lost abort no longer kills the GUI
 
 ## Repository layout
 
@@ -33,7 +34,7 @@ Only backends whose library file exists are shown in Settings (CPU is always lis
 | `engine/` | ctypes wrapper, dictionaries, download, MP3 concat |
 | `dictionaries/` | default JSON pronunciation rules |
 | `s2.cpp/` | git submodule — official engine |
-| `voices/` | bundled voice profile (`tankvoice.s2voice`) |
+| `voices/` | bundled voice profile (`tankindycast.s2voice`) |
 | `flatpak/` | Linux package: manifest, prebuilt libs, icon |
 | `lib/` | local plugin copies (gitignored; `make libs` / `make lib-dev`) |
 
@@ -51,7 +52,7 @@ make init-submodule
 
 Do not copy the engine in as a normal directory. Add it as a submodule so git stores a gitlink.
 
-Tokenizer and CUDA/Vulkan ggml patches come from that official tree (`s2.cpp/tokenizer.json`, `s2.cpp/patches/`). The bundled voice profile is `voices/tankvoice.s2voice` in this repository.
+Tokenizer and CUDA/Vulkan ggml patches come from that official tree (`s2.cpp/tokenizer.json`, `s2.cpp/patches/`). The bundled voice profile is `voices/tankindycast.s2voice` in this repository.
 
 ## Build s2 plugins
 
@@ -101,12 +102,12 @@ hf download rodrigomt/s2-pro-gguf --include 's2-pro-q8_0.gguf' --local-dir s2.cp
 
 ## Voice profile
 
-Bundled `.s2voice` file (no GitLab dependency):
+Bundled `.s2voice` file:
 
-- `voices/tankvoice.s2voice`
-- Settings **Voice dir**: `voices/` (native) or `/app/share/ttser/voices` (Flatpak)
+- `voices/tankindycast.s2voice`
+- Settings **Voice dir**: bundled path (`voices/` native, `/app/share/ttser/voices` Flatpak)
 
-Extra user profiles can live in the same directory; they are gitignored except `tankvoice.s2voice`.
+Extra user profiles live in the same directory on native builds, or in `~/.var/app/com.tagantank.ttser/data/voices` on Flatpak. Only `tankindycast.s2voice` is tracked in git.
 
 ## Run (native)
 
@@ -120,7 +121,7 @@ python -m ttser
 
 Needs `ffmpeg` on `PATH` for the final MP3.
 
-Voice clone: enable **Использовать пример голоса** and pick a reference audio file. Unchecked synthesis uses the model default voice. A reference transcript field is not required.
+Voice: pick **Стандартный голос модели** for the model default, or choose a saved profile such as `tankindycast`. Use **Создать голос** to encode a new `.s2voice` from reference audio and transcript.
 
 ## Dictionaries
 
@@ -140,14 +141,14 @@ Manifest: `flatpak/com.tagantank.ttser.yml`. App id: `com.tagantank.ttser`.
 GitHub Actions builds the bundle on `master`/PRs (CI artifact) and publishes it to [Releases](https://github.com/tagantank/ttser/releases) on a `v*` tag:
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.2.0
+git push origin v0.2.0
 ```
 
 Asset name: `ttser-<tag>-linux-x86_64.flatpak`.
 
 ```bash
-flatpak install --user --bundle ttser-v0.1.0-linux-x86_64.flatpak
+flatpak install --user --bundle ttser-v0.2.0-linux-x86_64.flatpak
 flatpak run com.tagantank.ttser
 ```
 

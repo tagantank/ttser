@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 
 HF_REPO = "rodrigomt/s2-pro-gguf"
@@ -73,3 +74,40 @@ def model_by_filename(filename: str) -> ModelOption | None:
         if model.filename == filename:
             return model
     return None
+
+
+def model_destination(models_dir: str | Path, model: ModelOption) -> Path:
+    return Path(models_dir).expanduser() / model.filename
+
+
+def is_model_file_complete(path: Path, size_bytes: int = 0) -> bool:
+    try:
+        if not path.is_file():
+            return False
+        size = path.stat().st_size
+    except OSError:
+        return False
+    minimum = 1024 * 1024
+    if size_bytes > 0:
+        return size >= max(minimum, int(size_bytes * 0.95))
+    return size >= minimum
+
+
+def find_downloaded_model(model: ModelOption, *locations: str | Path) -> Path | None:
+    seen: set[Path] = set()
+    for location in locations:
+        if not location:
+            continue
+        path = Path(location).expanduser()
+        candidate = path if path.name == model.filename else path / model.filename
+        key = candidate
+        if key in seen:
+            continue
+        seen.add(key)
+        if is_model_file_complete(candidate, model.size_bytes):
+            return candidate
+    return None
+
+
+def is_model_downloaded(models_dir: str | Path, model: ModelOption) -> bool:
+    return find_downloaded_model(model, models_dir) is not None

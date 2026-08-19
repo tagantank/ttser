@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
     QDialogButtonBox,
+    QFileDialog,
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
@@ -22,9 +23,9 @@ from PySide6.QtWidgets import (
 )
 
 from ttser.backends import available_backends, backend_by_id, resolve_library_path
-from ttser.model_catalog import MODELS, model_by_id
+from ttser.model_catalog import MODELS, find_downloaded_model, model_by_id, model_destination
 from ttser.model_download_worker import ModelDownloadWorker
-from ttser.settings import AppSettings, default_models_dir
+from ttser.settings import AppSettings, default_models_dir, model_lookup_dirs
 
 PROGRESS_MAX = 1000
 
@@ -57,6 +58,7 @@ class SettingsDialog(QDialog):
         self.model_description.setStyleSheet("color: palette(mid);")
 
         self.models_dir = QLineEdit(settings.models_dir or default_models_dir())
+        self.models_dir.textChanged.connect(self.on_model_changed)
         btn_models_dir = QPushButton("...")
         btn_models_dir.clicked.connect(self.pick_models_dir)
         models_dir_row = QHBoxLayout()
@@ -147,7 +149,7 @@ class SettingsDialog(QDialog):
             worker.finished.connect(worker.deleteLater)
         self.download_worker = None
         self.download_progress.setVisible(False)
-        self.set_download_ui_enabled(True)
+        self.update_download_button()
 
     def accept(self) -> None:
         self._stop_download()
@@ -170,6 +172,7 @@ class SettingsDialog(QDialog):
         self.model_description.setText(f"{model.description} Размер: {model.size}.")
         models_dir = Path(self.models_dir.text().strip() or default_models_dir())
         self.model_path.setText(str(models_dir / model.filename))
+        self.update_download_button()
 
     def on_backend_changed(self) -> None:
         backend = backend_by_id(self.backend.currentData())
@@ -186,30 +189,51 @@ class SettingsDialog(QDialog):
             else:
                 self.gpu_device_label.setText("GPU device")
 
+    def selected_models_dir(self) -> str:
+        return self.models_dir.text().strip() or default_models_dir()
+
+    def update_download_button(self) -> None:
+        if self.is_downloading():
+            self.btn_download.setEnabled(False)
+            self.btn_download.setText("Скачать модель")
+            return
+        model = self.selected_model()
+        found = find_downloaded_model(
+            model,
+            self.model_path.text().strip(),
+            *model_lookup_dirs(self.selected_models_dir()),
+        )
+        self.btn_download.setEnabled(found is None)
+        self.btn_download.setText("Модель уже скачана" if found else "Скачать модель")
+        if found is None:
+            return
+        parent = str(found.parent)
+        if self.models_dir.text().strip() != parent:
+            self.models_dir.blockSignals(True)
+            self.models_dir.setText(parent)
+            self.models_dir.blockSignals(False)
+        if self.model_path.text().strip() != str(found):
+            self.model_path.setText(str(found))
+
     def pick_models_dir(self) -> None:
         path = QFileDialog.getExistingDirectory(self, "Каталог для моделей", self.models_dir.text())
         if path:
             self.models_dir.setText(path)
-            self.on_model_changed()
 
     def set_download_ui_enabled(self, enabled: bool) -> None:
-        self.btn_download.setEnabled(enabled)
         self.model_choice.setEnabled(enabled)
         self.models_dir.setEnabled(enabled)
+        if enabled:
+            self.update_download_button()
+        else:
+            self.btn_download.setEnabled(False)
 
     def start_download(self) -> None:
         model = self.selected_model()
-        destination = Path(self.models_dir.text().strip() or default_models_dir()) / model.filename
-        if destination.is_file():
-            answer = QMessageBox.question(
-                self,
-                "Файл уже существует",
-                f"{destination.name} уже есть.\nПерекачать?",
-                QMessageBox.Yes | QMessageBox.No,
-            )
-            if answer != QMessageBox.Yes:
-                self.model_path.setText(str(destination))
-                return
+        destination = model_destination(self.selected_models_dir(), model)
+        if find_downloaded_model(model, destination, *model_lookup_dirs(self.selected_models_dir())):
+            self.update_download_button()
+            return
 
         self.download_progress.setVisible(True)
         self.download_progress.setRange(0, PROGRESS_MAX)
@@ -239,11 +263,13 @@ class SettingsDialog(QDialog):
         self.download_progress.setFormat("Готово")
         self.model_path.setText(path)
         self.set_download_ui_enabled(True)
+        self.update_download_button()
         QMessageBox.information(self, "Готово", f"Модель скачана:\n{path}")
 
     def on_download_failed(self, error: str) -> None:
         self.download_progress.setVisible(False)
         self.set_download_ui_enabled(True)
+        self.update_download_button()
         QMessageBox.critical(self, "Ошибка скачивания", error)
 
     def to_settings(self) -> AppSettings:
@@ -265,8 +291,7 @@ class SettingsDialog(QDialog):
             lib_metal=self.settings.lib_metal,
             dictionary_paths=self.settings.dictionary_paths,
             dictionaries_enabled=self.settings.dictionaries_enabled,
-            reference_voice_enabled=self.settings.reference_voice_enabled,
-            reference_audio_path=self.settings.reference_audio_path,
+            selected_voice_id=self.settings.selected_voice_id,
         )
         for backend in self._available_backends:
             field = self.lib_fields.get(backend.id)
