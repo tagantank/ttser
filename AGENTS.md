@@ -106,8 +106,15 @@ make lib-metal        # macOS
 
 Flatpak (Linux):
 
+GitHub Actions (`.github/workflows/`):
+
+- `ci.yml` — build Flatpak on `master` and pull requests (artifact only)
+- `release.yml` — on tag `v*` build the same bundle and attach it to a GitHub Release
+
+Wheels are not in git. CI runs `pip download --dest flatpak/wheels 'PySide6==6.11.2'` before `flatpak-builder`.
+
 ```bash
-pip download --dest flatpak/wheels PySide6    # if wheels/ is empty
+pip download --dest flatpak/wheels 'PySide6==6.11.2'    # if wheels/ is empty
 flatpak-builder --force-clean --repo=repo build-flatpak flatpak/com.tagantank.ttser.yml
 flatpak build-bundle repo ttser.flatpak com.tagantank.ttser
 flatpak install --user --reinstall --bundle ttser.flatpak -y

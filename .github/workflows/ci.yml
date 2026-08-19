@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  flatpak:
+    name: Flatpak
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:freedesktop-24.08
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download PySide wheels
+        run: |
+          set -euo pipefail
+          mkdir -p flatpak/wheels
+          if ! python3 -m pip --version >/dev/null 2>&1; then
+            dnf install -y python3-pip
+          fi
+          python3 -m pip download --dest flatpak/wheels 'PySide6==6.11.2'
+          ls -lh flatpak/wheels
+
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: ttser.flatpak
+          manifest-path: flatpak/com.tagantank.ttser.yml
+          cache-key: ttser-flatpak-24.08
+          upload-artifact: true

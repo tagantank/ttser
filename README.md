@@ -137,13 +137,24 @@ Lines of the form `[pause 500ms]` become silence, not model output.
 
 Manifest: `flatpak/com.tagantank.ttser.yml`. App id: `com.tagantank.ttser`.
 
-Offline PySide wheels (gitignored). If `flatpak/wheels/` is empty:
+GitHub Actions builds the bundle on `master`/PRs (CI artifact) and publishes it to [Releases](https://github.com/tagantank/ttser/releases) on a `v*` tag:
 
 ```bash
-pip download --dest flatpak/wheels PySide6
+git tag v0.1.0
+git push origin v0.1.0
 ```
 
+Asset name: `ttser-<tag>-linux-x86_64.flatpak`.
+
 ```bash
+flatpak install --user --bundle ttser-v0.1.0-linux-x86_64.flatpak
+flatpak run com.tagantank.ttser
+```
+
+Local build. Offline PySide wheels are gitignored:
+
+```bash
+pip download --dest flatpak/wheels 'PySide6==6.11.2'
 sudo dnf install flatpak-builder
 flatpak-builder --force-clean --repo=repo build-flatpak flatpak/com.tagantank.ttser.yml
 flatpak build-bundle repo ttser.flatpak com.tagantank.ttser

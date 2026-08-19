@@ -1,0 +1,67 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  flatpak:
+    name: Build and publish Flatpak
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:freedesktop-24.08
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download PySide wheels
+        run: |
+          set -euo pipefail
+          mkdir -p flatpak/wheels
+          if ! python3 -m pip --version >/dev/null 2>&1; then
+            dnf install -y python3-pip
+          fi
+          python3 -m pip download --dest flatpak/wheels 'PySide6==6.11.2'
+          ls -lh flatpak/wheels
+
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: ttser.flatpak
+          manifest-path: flatpak/com.tagantank.ttser.yml
+          cache-key: ttser-flatpak-24.08
+          upload-artifact: true
+
+      - name: Name bundle and checksum
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME}"
+          ARTIFACT="ttser-${VERSION}-linux-x86_64.flatpak"
+          mv ttser.flatpak "${ARTIFACT}"
+          sha256sum "${ARTIFACT}" | tee "${ARTIFACT}.sha256"
+
+      - uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          generate_release_notes: true
+          append_body: true
+          fail_on_unmatched_files: true
+          files: |
+            ttser-${{ github.ref_name }}-linux-x86_64.flatpak
+            ttser-${{ github.ref_name }}-linux-x86_64.flatpak.sha256
+          body: |
+            Linux Flatpak for `${{ github.ref_name }}`.
+
+            ```bash
+            flatpak install --user --bundle ttser-${{ github.ref_name }}-linux-x86_64.flatpak
+            flatpak run com.tagantank.ttser
+            ```
