@@ -9,7 +9,7 @@ from pathlib import Path
 MAGIC = b"S2VOICE\x00"
 VERSION = 1
 DEFAULT_VOICE_ID = ""
-DEFAULT_VOICE_LABEL = "Стандартный голос модели"
+DEFAULT_VOICE_LABEL = "Model default voice"
 BUNDLED_VOICE_ORDER = ("tankindycast",)
 PROTECTED_VOICE_IDS = frozenset({"tankindycast"})
 VOICE_ID_RE = re.compile(r"^[A-Za-z0-9_-]+$")
@@ -112,9 +112,9 @@ def preferred_voice_id(
 def validate_voice_id(voice_id: str) -> str:
     name = voice_id.strip()
     if not name:
-        raise ValueError("Укажите имя голоса")
+        raise ValueError("voice name is required")
     if not VOICE_ID_RE.fullmatch(name):
-        raise ValueError("Имя голоса может содержать только латинские буквы, цифры, _ и -")
+        raise ValueError("voice name may only contain Latin letters, digits, _ and -")
     return name
 
 
@@ -148,7 +148,7 @@ def voice_output_path(voice_id: str, *voice_dirs: str | Path) -> Path:
         if bundled is not None and bundled.parent.resolve() != user_dir.resolve():
             if output.is_file():
                 return output
-            raise ValueError(f"Профиль {name} встроен в приложение и не может быть перезаписан")
+            raise ValueError(f"bundled voice profile cannot be overwritten: {name}")
     return output
 
 

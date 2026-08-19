@@ -22,7 +22,9 @@ class ModelOption:
 
     @property
     def combo_label(self) -> str:
-        return f"{self.title} ({self.size})"
+        from ttser.i18n import model_combo_label
+
+        return model_combo_label(self.id, self.title)
 
 
 MODELS: tuple[ModelOption, ...] = (
@@ -30,33 +32,33 @@ MODELS: tuple[ModelOption, ...] = (
         id="q4_k_m",
         filename="s2-pro-q4_k_m.gguf",
         title="s2-pro-q4_k_m",
-        size="~3.3 ГиБ",
+        size="~3.3 GiB",
         size_bytes=3_566_165_088,
         description=(
-            "Быстрее на CPU и меньше занимает на диске. "
-            "Подходит как запасной вариант или если мало RAM."
+            "Fastest on CPU and smallest on disk. "
+            "Useful as a fallback or when RAM is limited."
         ),
     ),
     ModelOption(
         id="q8_0",
         filename="s2-pro-q8_0.gguf",
         title="s2-pro-q8_0",
-        size="~5.2 ГиБ",
+        size="~5.2 GiB",
         size_bytes=5_630_037_088,
         description=(
-            "Рекомендуемый профиль качества. "
-            "Лучший баланс между звуком и скоростью для повседневной работы."
+            "Recommended quality profile. "
+            "Best balance of sound and speed for everyday use."
         ),
     ),
     ModelOption(
         id="f16",
         filename="s2-pro-f16.gguf",
         title="s2-pro-f16",
-        size="~9.2 ГиБ",
+        size="~9.2 GiB",
         size_bytes=9_906_568_704,
         description=(
-            "Максимальное качество без квантования AR-блока. "
-            "На CPU заметно медленнее, нужен большой объём памяти."
+            "Maximum quality without quantizing the AR block. "
+            "Much slower on CPU and needs a large amount of memory."
         ),
     ),
 )

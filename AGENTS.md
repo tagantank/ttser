@@ -57,8 +57,9 @@ CPU synthesis stays in the GUI worker thread.
 
 - `InitializeS2PipelineFromFiles` success is `1`, not `0`
 - `S2Synthesize` success is `> 0` (frame count)
-- Voice clone loads a bundled or user `.s2voice` profile selected in the main-window **Голос** dropdown. Default item uses the model's built-in voice (no profile). Profile transcripts come from the `.s2voice` file.
-- New profiles are created via **Создать голос** (reference audio + transcript) and saved as user `.s2voice` files
+- Voice clone loads a bundled or user `.s2voice` profile selected in the main-window **Voice** dropdown. Default item uses the model's built-in voice (no profile). Profile transcripts come from the `.s2voice` file.
+- New profiles are created via **Create voice** (reference audio + transcript) and saved as user `.s2voice` files
+- UI language: English default; Russian via **Settings → Interface → Language** (`ui_language` in `QSettings`, catalogs in `ttser/i18n.py`)
 - Cancel synthesis between lines via `should_cancel` → `SynthesisCancelled`. GPU jobs cancel by terminating the child process
 - Lines like `[pause 500ms]` become silence WAVs, not model calls
 - Vulkan: `codec_follow_backend=0`. GPU jobs use `python -m engine.s2_synth` with `skip_existing` so a DeviceLost abort can resume

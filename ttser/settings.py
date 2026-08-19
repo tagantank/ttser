@@ -9,6 +9,7 @@ from PySide6.QtCore import QSettings
 
 from engine.s2_voice import DEFAULT_VOICE_ID, preferred_voice_id, voice_search_dirs
 from ttser.backends import normalize_backend, resolve_library_path
+from ttser.i18n import DEFAULT_LANGUAGE, normalize_language
 from ttser.model_catalog import find_downloaded_model, model_by_filename, model_by_id
 
 
@@ -74,6 +75,7 @@ class AppSettings:
     dictionary_paths: list[str] = field(default_factory=default_dictionary_paths)
     dictionaries_enabled: bool = True
     selected_voice_id: str = DEFAULT_VOICE_ID
+    ui_language: str = DEFAULT_LANGUAGE
 
 
 def _adjust_defaults(settings: AppSettings) -> None:
@@ -155,6 +157,7 @@ def load_settings() -> AppSettings:
         dictionary_paths=q.value("dictionary_paths", default_dicts),
         dictionaries_enabled=bool(q.value("dictionaries_enabled", True)),
         selected_voice_id=DEFAULT_VOICE_ID,
+        ui_language=normalize_language(q.value("ui_language", DEFAULT_LANGUAGE)),
     )
     _adjust_defaults(s)
     _migrate_library_paths(s)
@@ -211,3 +214,4 @@ def save_settings(s: AppSettings) -> None:
     q.setValue("dictionary_paths", s.dictionary_paths)
     q.setValue("dictionaries_enabled", s.dictionaries_enabled)
     q.setValue("selected_voice_id", s.selected_voice_id)
+    q.setValue("ui_language", normalize_language(s.ui_language))

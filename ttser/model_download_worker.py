@@ -6,6 +6,7 @@ from PySide6.QtCore import QThread, Signal
 
 from engine.errors import DownloadCancelled
 from engine.model_download import download_file, format_bytes, resolve_content_length
+from ttser.i18n import t
 from ttser.model_catalog import ModelOption
 
 PROGRESS_MAX = 1000
@@ -39,7 +40,7 @@ class ModelDownloadWorker(QThread):
 
     def run(self) -> None:
         try:
-            self.status.emit(f"Скачивание {self.model.filename}...")
+            self.status.emit(t("download.downloading", filename=self.model.filename))
             total = resolve_content_length(self.model.url, expected_size=self.model.size_bytes)
             if self._cancel_requested:
                 return

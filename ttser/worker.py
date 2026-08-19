@@ -24,6 +24,8 @@ from engine.s2_lib import (
     write_synth_status,
 )
 
+from ttser.i18n import t
+
 GPU_BACKENDS = {0, 1, 2}
 MAX_LINE_ATTEMPTS = 2
 JOB_NAME = ".ttser-synth-job.json"
@@ -88,11 +90,11 @@ class SynthesisWorker(QThread):
                     rules = load_rules(Path(path))
                     text, stats = apply_rules(text, rules)
                     total += sum(stats.values())
-                self.log.emit(f"Pronunciation replacements: {total}")
+                self.log.emit(t("worker.pronunciation_replacements", total=total))
 
             lines = [line.strip() for line in text.splitlines() if line.strip()]
             if not lines:
-                raise RuntimeError("No lines to synthesize")
+                raise RuntimeError(t("worker.no_lines"))
 
             output_dir = Path(self.wav_dir)
             if output_dir.is_dir():
@@ -202,10 +204,8 @@ class SynthesisWorker(QThread):
                 if status in ("", "init"):
                     init_failures += 1
                     if init_failures >= 2:
-                        raise RuntimeError(
-                            "GPU pipeline failed to start. Try the CPU backend or a smaller model."
-                        )
-                    self.log.emit("GPU pipeline died during init; retrying...")
+                        raise RuntimeError(t("worker.gpu_pipeline_failed"))
+                    self.log.emit(t("worker.gpu_init_retry"))
                     continue
 
                 line_attempts[missing] = line_attempts.get(missing, 0) + 1
@@ -214,18 +214,26 @@ class SynthesisWorker(QThread):
                     snippet = snippet[:77] + "..."
                 if line_attempts[missing] < MAX_LINE_ATTEMPTS:
                     self.log.emit(
-                        f"GPU device lost on line {missing} ({snippet}); retrying with a fresh process..."
+                        t(
+                            "worker.gpu_device_lost",
+                            line=missing,
+                            snippet=snippet,
+                        )
                     )
                     continue
                 out = chunk_wav_path(output_dir, missing)
                 write_silence(out, 0.4)
                 write_synth_status(output_dir, f"skipped {missing}")
                 self.log.emit(
-                    f"Skipping line {missing} after repeated GPU crash (inserted silence): {snippet}"
+                    t(
+                        "worker.gpu_skip_line",
+                        line=missing,
+                        snippet=snippet,
+                    )
                 )
 
             if first_incomplete_index(len(lines), output_dir) is not None:
-                raise RuntimeError("Synthesis stopped after repeated GPU crashes")
+                raise RuntimeError(t("worker.gpu_repeated_crash"))
         finally:
             job_path.unlink(missing_ok=True)
 

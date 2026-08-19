@@ -17,13 +17,12 @@ from PySide6.QtWidgets import (
 )
 
 from engine.pronunciation import Rule, load_rules, save_rules, validate_rules
+from ttser.i18n import t, translate_dict_validation_error
 
 
 class DictionaryEditorDialog(QDialog):
     def __init__(self, dictionary_paths: list[str], parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Словари")
-        self.resize(900, 520)
         self.dictionary_paths = list(dictionary_paths)
         self._current_rules: list[Rule] = []
         self._dirty = False
@@ -33,20 +32,22 @@ class DictionaryEditorDialog(QDialog):
         right = QVBoxLayout()
         root.addLayout(left, 1)
         root.addLayout(right, 3)
+        self.resize(900, 520)
 
+        self.lbl_connected = QLabel()
         self.list_widget = QListWidget()
         for path in self.dictionary_paths:
             self.list_widget.addItem(path)
         self.list_widget.currentRowChanged.connect(self._load_selected)
-        left.addWidget(QLabel("Подключенные словари"))
+        left.addWidget(self.lbl_connected)
         left.addWidget(self.list_widget)
 
-        btn_add_file = QPushButton("Подключить JSON")
-        btn_add_file.clicked.connect(self._add_file)
-        btn_remove_file = QPushButton("Отключить")
-        btn_remove_file.clicked.connect(self._remove_file)
-        left.addWidget(btn_add_file)
-        left.addWidget(btn_remove_file)
+        self.btn_add_file = QPushButton()
+        self.btn_add_file.clicked.connect(self._add_file)
+        self.btn_remove_file = QPushButton()
+        self.btn_remove_file.clicked.connect(self._remove_file)
+        left.addWidget(self.btn_add_file)
+        left.addWidget(self.btn_remove_file)
 
         self.table = QTableWidget(0, 3)
         self.table.setHorizontalHeaderLabels(["from", "to", "note"])
@@ -54,28 +55,42 @@ class DictionaryEditorDialog(QDialog):
         right.addWidget(self.table)
 
         row_buttons = QHBoxLayout()
-        for text, handler in [
-            ("Добавить строку", self._add_row),
-            ("Удалить строку", self._delete_row),
-            ("Сохранить", self._save_current),
-        ]:
-            btn = QPushButton(text)
-            btn.clicked.connect(handler)
-            row_buttons.addWidget(btn)
+        self.btn_add_row = QPushButton()
+        self.btn_add_row.clicked.connect(self._add_row)
+        self.btn_delete_row = QPushButton()
+        self.btn_delete_row.clicked.connect(self._delete_row)
+        self.btn_save = QPushButton()
+        self.btn_save.clicked.connect(self._save_current)
+        row_buttons.addWidget(self.btn_add_row)
+        row_buttons.addWidget(self.btn_delete_row)
+        row_buttons.addWidget(self.btn_save)
         right.addLayout(row_buttons)
 
-        box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        box.accepted.connect(self.accept)
-        box.rejected.connect(self.reject)
-        right.addWidget(box)
+        self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+        right.addWidget(self.button_box)
+
+        self.retranslate()
         if self.dictionary_paths:
             self.list_widget.setCurrentRow(0)
+
+    def retranslate(self) -> None:
+        self.setWindowTitle(t("dict.title"))
+        self.lbl_connected.setText(t("dict.connected"))
+        self.btn_add_file.setText(t("dict.attach_json"))
+        self.btn_remove_file.setText(t("dict.detach"))
+        self.btn_add_row.setText(t("dict.add_row"))
+        self.btn_delete_row.setText(t("dict.delete_row"))
+        self.btn_save.setText(t("dict.save"))
+        self.button_box.button(QDialogButtonBox.Ok).setText(t("dialog.ok"))
+        self.button_box.button(QDialogButtonBox.Cancel).setText(t("dialog.cancel"))
 
     def _mark_dirty(self) -> None:
         self._dirty = True
 
     def _add_file(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(self, "Выбрать JSON словарь", "", "JSON (*.json)")
+        path, _ = QFileDialog.getOpenFileName(self, t("dict.pick_json"), "", "JSON (*.json)")
         if not path:
             return
         if path not in self.dictionary_paths:
@@ -139,16 +154,19 @@ class DictionaryEditorDialog(QDialog):
         rules = self._rules_from_table()
         errors = validate_rules(rules)
         if errors:
-            QMessageBox.warning(self, "Ошибка словаря", "\n".join(errors))
+            translated = [translate_dict_validation_error(error) for error in errors]
+            QMessageBox.warning(self, t("dict.validation_error"), "\n".join(translated))
             return
         path.parent.mkdir(parents=True, exist_ok=True)
         save_rules(path, rules)
         self._dirty = False
 
     def _confirm_discard(self) -> bool:
-        return QMessageBox.question(
-            self,
-            "Несохраненные правки",
-            "Есть несохраненные изменения. Продолжить без сохранения?",
-        ) == QMessageBox.StandardButton.Yes
-
+        return (
+            QMessageBox.question(
+                self,
+                t("dict.unsaved_title"),
+                t("dict.unsaved_message"),
+            )
+            == QMessageBox.StandardButton.Yes
+        )

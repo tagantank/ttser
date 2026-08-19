@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from PySide6.QtWidgets import (
+    QApplication,
     QFileDialog,
     QHBoxLayout,
     QLabel,
@@ -20,7 +21,6 @@ from PySide6.QtWidgets import (
 
 from engine.s2_voice import (
     DEFAULT_VOICE_ID,
-    DEFAULT_VOICE_LABEL,
     list_voice_ids,
     preferred_voice_id,
     resolve_voice_path,
@@ -28,6 +28,7 @@ from engine.s2_voice import (
 )
 from ttser.backends import backend_type_for, library_path_for_backend, normalize_backend
 from ttser.dictionary_editor import DictionaryEditorDialog
+from ttser.i18n import apply_language, t
 from ttser.settings import AppSettings, load_settings, save_settings
 from ttser.settings_dialog import SettingsDialog
 from ttser.voice_create_dialog import VoiceCreateDialog
@@ -39,7 +40,6 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.settings_obj: AppSettings = load_settings()
         self.worker: SynthesisWorker | None = None
-        self.setWindowTitle("ttser — Fish Audio S2 Pro")
         self.resize(920, 680)
 
         root = QWidget()
@@ -48,18 +48,20 @@ class MainWindow(QMainWindow):
 
         top = QHBoxLayout()
         self.input_path = QLineEdit()
-        self.btn_input = QPushButton("Текст...")
+        self.lbl_input = QLabel()
+        self.btn_input = QPushButton()
         self.btn_input.clicked.connect(self.pick_input)
-        top.addWidget(QLabel("Input"))
+        top.addWidget(self.lbl_input)
         top.addWidget(self.input_path, 1)
         top.addWidget(self.btn_input)
         layout.addLayout(top)
 
         mid = QHBoxLayout()
         self.output_path = QLineEdit("output/result.mp3")
-        self.btn_output = QPushButton("MP3...")
+        self.lbl_output = QLabel()
+        self.btn_output = QPushButton()
         self.btn_output.clicked.connect(self.pick_output)
-        mid.addWidget(QLabel("Output MP3"))
+        mid.addWidget(self.lbl_output)
         mid.addWidget(self.output_path, 1)
         mid.addWidget(self.btn_output)
         layout.addLayout(mid)
@@ -67,27 +69,28 @@ class MainWindow(QMainWindow):
         voice_row = QHBoxLayout()
         self.voice_combo = QComboBox()
         self.voice_combo.currentIndexChanged.connect(self.on_voice_choice_changed)
-        self.btn_create_voice = QPushButton("Создать голос")
+        self.lbl_voice = QLabel()
+        self.btn_create_voice = QPushButton()
         self.btn_create_voice.clicked.connect(self.open_create_voice)
-        voice_row.addWidget(QLabel("Голос"))
+        voice_row.addWidget(self.lbl_voice)
         voice_row.addWidget(self.voice_combo, 1)
         voice_row.addWidget(self.btn_create_voice)
         layout.addLayout(voice_row)
 
         flags = QHBoxLayout()
-        self.apply_dicts = QCheckBox("Применять словари")
+        self.apply_dicts = QCheckBox()
         self.apply_dicts.setChecked(self.settings_obj.dictionaries_enabled)
         flags.addWidget(self.apply_dicts)
         layout.addLayout(flags)
 
         buttons = QHBoxLayout()
-        self.btn_settings = QPushButton("Настройки")
+        self.btn_settings = QPushButton()
         self.btn_settings.clicked.connect(self.open_settings)
-        self.btn_dicts = QPushButton("Словари")
+        self.btn_dicts = QPushButton()
         self.btn_dicts.clicked.connect(self.open_dicts)
-        self.btn_start = QPushButton("Синтез")
+        self.btn_start = QPushButton()
         self.btn_start.clicked.connect(self.start)
-        self.btn_stop = QPushButton("Стоп")
+        self.btn_stop = QPushButton()
         self.btn_stop.clicked.connect(self.stop)
         buttons.addWidget(self.btn_settings)
         buttons.addWidget(self.btn_dicts)
@@ -102,8 +105,29 @@ class MainWindow(QMainWindow):
         self.log.setReadOnly(True)
         layout.addWidget(self.log, 1)
 
+        self.retranslate()
         self.reload_voices()
         self._set_synthesis_running(False)
+
+    def retranslate(self) -> None:
+        self.setWindowTitle(t("main.title"))
+        self.lbl_input.setText(t("main.input"))
+        self.btn_input.setText(t("main.text_btn"))
+        self.lbl_output.setText(t("main.output_mp3"))
+        self.btn_output.setText(t("main.mp3_btn"))
+        self.lbl_voice.setText(t("main.voice"))
+        self.btn_create_voice.setText(t("main.create_voice"))
+        self.apply_dicts.setText(t("main.apply_dicts"))
+        self.btn_settings.setText(t("main.settings"))
+        self.btn_dicts.setText(t("main.dictionaries"))
+        self.btn_start.setText(t("main.synthesize"))
+        self.btn_stop.setText(t("main.stop"))
+        self._refresh_default_voice_label()
+
+    def _refresh_default_voice_label(self) -> None:
+        idx = self.voice_combo.findData(DEFAULT_VOICE_ID)
+        if idx >= 0:
+            self.voice_combo.setItemText(idx, t("voice.default_label"))
 
     def voice_dirs(self) -> list[str]:
         return [str(path) for path in voice_search_dirs(self.settings_obj.voice_dir)]
@@ -114,7 +138,7 @@ class MainWindow(QMainWindow):
         selected = preferred_voice_id(*dirs, requested=requested)
         self.voice_combo.blockSignals(True)
         self.voice_combo.clear()
-        self.voice_combo.addItem(DEFAULT_VOICE_LABEL, DEFAULT_VOICE_ID)
+        self.voice_combo.addItem(t("voice.default_label"), DEFAULT_VOICE_ID)
         for voice_id in list_voice_ids(*dirs):
             self.voice_combo.addItem(voice_id, voice_id)
         idx = self.voice_combo.findData(selected)
@@ -132,12 +156,14 @@ class MainWindow(QMainWindow):
         save_settings(self.settings_obj)
 
     def pick_input(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(self, "Выберите текст", "", "Text (*.txt *.md)")
+        path, _ = QFileDialog.getOpenFileName(self, t("main.pick_input"), "", "Text (*.txt *.md)")
         if path:
             self.input_path.setText(path)
 
     def pick_output(self) -> None:
-        path, _ = QFileDialog.getSaveFileName(self, "Куда сохранить mp3", "output/result.mp3", "MP3 (*.mp3)")
+        path, _ = QFileDialog.getSaveFileName(
+            self, t("main.pick_output"), "output/result.mp3", "MP3 (*.mp3)"
+        )
         if path:
             self.output_path.setText(path)
 
@@ -153,6 +179,10 @@ class MainWindow(QMainWindow):
             self.settings_obj.backend = normalize_backend(self.settings_obj)
             self.settings_obj.dictionaries_enabled = self.apply_dicts.isChecked()
             save_settings(self.settings_obj)
+            app = QApplication.instance()
+            if app is not None:
+                apply_language(app, self.settings_obj.ui_language)
+            self.retranslate()
             self.reload_voices()
 
     def open_dicts(self) -> None:
@@ -184,13 +214,17 @@ class MainWindow(QMainWindow):
         input_file = Path(self.input_path.text().strip())
         output_mp3 = Path(self.output_path.text().strip())
         if not input_file.is_file():
-            QMessageBox.warning(self, "Ошибка", "Input file not found")
+            QMessageBox.warning(self, t("main.error"), t("main.input_not_found"))
             return
 
         self.settings_obj.backend = normalize_backend(self.settings_obj)
         library_path = library_path_for_backend(self.settings_obj)
         if not library_path.is_file():
-            QMessageBox.warning(self, "Ошибка", f"Library not found: {library_path}")
+            QMessageBox.warning(
+                self,
+                t("main.error"),
+                t("main.library_not_found", path=library_path),
+            )
             return
 
         voice_name = None
@@ -200,7 +234,11 @@ class MainWindow(QMainWindow):
             try:
                 resolve_voice_path(voice_id, *self.voice_dirs())
             except FileNotFoundError:
-                QMessageBox.warning(self, "Ошибка", f"Профиль голоса не найден: {voice_id}")
+                QMessageBox.warning(
+                    self,
+                    t("main.error"),
+                    t("main.voice_not_found", voice_id=voice_id),
+                )
                 return
             voice_name = voice_id
             voice_dirs = self.voice_dirs()
@@ -240,7 +278,7 @@ class MainWindow(QMainWindow):
 
     def stop(self) -> None:
         if self.worker and self.worker.isRunning():
-            self.log.appendPlainText("Остановка синтеза...")
+            self.log.appendPlainText(t("main.stopping"))
             self.btn_stop.setEnabled(False)
             self.worker.request_cancel()
 
@@ -251,14 +289,14 @@ class MainWindow(QMainWindow):
 
     def on_done(self, output: str) -> None:
         self._set_synthesis_running(False)
-        self.log.appendPlainText(f"Done: {output}")
-        QMessageBox.information(self, "Готово", f"MP3 created:\n{output}")
+        self.log.appendPlainText(t("main.done_log", output=output))
+        QMessageBox.information(self, t("main.done"), t("main.mp3_created", path=output))
 
     def on_cancelled(self) -> None:
         self._set_synthesis_running(False)
-        self.log.appendPlainText("Synthesis stopped.")
+        self.log.appendPlainText(t("main.synthesis_stopped"))
 
     def on_failed(self, error: str) -> None:
         self._set_synthesis_running(False)
-        self.log.appendPlainText(f"Error: {error}")
-        QMessageBox.critical(self, "Ошибка", error)
+        self.log.appendPlainText(t("main.error_log", error=error))
+        QMessageBox.critical(self, t("main.error"), error)

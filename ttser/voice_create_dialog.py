@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
-from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
@@ -25,7 +23,8 @@ from engine.s2_voice import (
     validate_voice_id,
     voice_search_dirs,
 )
-from ttser.backends import backend_type_for, library_path_for_backend, normalize_backend
+from ttser.backends import library_path_for_backend, normalize_backend
+from ttser.i18n import t, translate_voice_error
 from ttser.settings import AppSettings
 from ttser.voice_create_worker import VoiceCreateWorker
 
@@ -36,7 +35,6 @@ class VoiceCreateDialog(QDialog):
         self.settings = settings
         self.created_voice_id = ""
         self.worker: VoiceCreateWorker | None = None
-        self.setWindowTitle("Создать голос")
         self.resize(640, 360)
 
         layout = QVBoxLayout(self)
@@ -49,24 +47,37 @@ class VoiceCreateDialog(QDialog):
         btn_audio.clicked.connect(self.pick_audio)
         audio_row.addWidget(btn_audio)
         self.transcript = QPlainTextEdit()
-        self.transcript.setPlaceholderText("Точный текст, произнесённый в reference-аудио")
-        form.addRow("Имя", self.voice_name)
-        form.addRow("Аудио", audio_row)
-        form.addRow("Транскрипт", self.transcript)
+        self.lbl_name = QLabel()
+        self.lbl_audio = QLabel()
+        self.lbl_transcript = QLabel()
+        form.addRow(self.lbl_name, self.voice_name)
+        form.addRow(self.lbl_audio, audio_row)
+        form.addRow(self.lbl_transcript, self.transcript)
         layout.addLayout(form)
-        layout.addWidget(
-            QLabel("Нужен короткий клип 5–30 секунд (WAV или MP3) и точный транскрипт.")
-        )
+        self.hint_label = QLabel()
+        layout.addWidget(self.hint_label)
 
         self.buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         self.buttons.accepted.connect(self.create_voice)
         self.buttons.rejected.connect(self.reject)
         layout.addWidget(self.buttons)
 
+        self.retranslate()
+
+    def retranslate(self) -> None:
+        self.setWindowTitle(t("voice_create.title"))
+        self.lbl_name.setText(t("voice_create.name"))
+        self.lbl_audio.setText(t("voice_create.audio"))
+        self.lbl_transcript.setText(t("voice_create.transcript"))
+        self.transcript.setPlaceholderText(t("voice_create.transcript_placeholder"))
+        self.hint_label.setText(t("voice_create.hint"))
+        self.buttons.button(QDialogButtonBox.Ok).setText(t("dialog.ok"))
+        self.buttons.button(QDialogButtonBox.Cancel).setText(t("dialog.cancel"))
+
     def pick_audio(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
             self,
-            "Выберите reference-аудио",
+            t("voice_create.pick_audio"),
             "",
             "Audio (*.wav *.mp3 *.flac *.m4a *.ogg)",
         )
@@ -85,17 +96,17 @@ class VoiceCreateDialog(QDialog):
         try:
             voice_id = validate_voice_id(self.voice_name.text())
         except ValueError as exc:
-            QMessageBox.warning(self, "Ошибка", str(exc))
+            QMessageBox.warning(self, t("main.error"), translate_voice_error(str(exc)))
             return
 
         audio = self.audio_path.text().strip()
         if not audio or not Path(audio).is_file():
-            QMessageBox.warning(self, "Ошибка", "Укажите существующий аудиофайл")
+            QMessageBox.warning(self, t("main.error"), t("voice.error.audio_missing"))
             return
 
         transcript = self.transcript.toPlainText().strip()
         if not transcript:
-            QMessageBox.warning(self, "Ошибка", "Укажите транскрипт reference-аудио")
+            QMessageBox.warning(self, t("main.error"), t("voice.error.transcript_missing"))
             return
 
         search_dirs = [str(path) for path in voice_search_dirs(self.settings.voice_dir)]
@@ -103,8 +114,8 @@ class VoiceCreateDialog(QDialog):
         if output_path.is_file():
             answer = QMessageBox.question(
                 self,
-                "Перезаписать?",
-                f"Профиль {voice_id}.s2voice уже существует. Перезаписать?",
+                t("voice.error.overwrite_title"),
+                t("voice.error.overwrite_message", voice_id=voice_id),
             )
             if answer != QMessageBox.StandardButton.Yes:
                 return
@@ -116,18 +127,22 @@ class VoiceCreateDialog(QDialog):
             if bundled is not None and bundled.resolve() != output_path.resolve():
                 QMessageBox.warning(
                     self,
-                    "Ошибка",
-                    f"Имя {voice_id} зарезервировано для встроенного профиля",
+                    t("main.error"),
+                    t("voice.error.reserved_name", voice_id=voice_id),
                 )
                 return
 
         self.settings.backend = normalize_backend(self.settings)
         library_path = library_path_for_backend(self.settings)
         if not library_path.is_file():
-            QMessageBox.warning(self, "Ошибка", f"Library not found: {library_path}")
+            QMessageBox.warning(
+                self,
+                t("main.error"),
+                t("main.library_not_found", path=library_path),
+            )
             return
         if not Path(self.settings.model_path).is_file():
-            QMessageBox.warning(self, "Ошибка", "Модель не найдена. Скачайте её в Настройках.")
+            QMessageBox.warning(self, t("main.error"), t("voice.error.model_missing"))
             return
 
         self._set_busy(True)
@@ -153,4 +168,4 @@ class VoiceCreateDialog(QDialog):
 
     def on_failed(self, error: str) -> None:
         self._set_busy(False)
-        QMessageBox.critical(self, "Ошибка", error)
+        QMessageBox.critical(self, t("main.error"), error)

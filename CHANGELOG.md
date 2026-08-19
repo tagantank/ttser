@@ -1,0 +1,55 @@
+# Changelog
+
+All notable changes to ttser are documented in this file.
+
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.3.0] — 2026-08-20
+
+### Added
+
+- English UI (default) and Russian UI; switch language in **Settings → Interface → Language** without restart
+- In-process translation catalog in `ttser/i18n.py` with live `retranslate()` for the main window and dialogs
+
+### Changed
+
+- GUI strings no longer hardcoded in Russian; English is the default for new installs and when `ui_language` is unset
+
+## [0.2.0] — 2026-08-20
+
+### Added
+
+- Voice profile picker on the main window: model default, bundled `tankindycast`, or a user `.s2voice` file
+- **Создать голос** dialog to encode a new `.s2voice` from reference audio and a transcript
+- Flatpak user voice directory: `~/.var/app/com.tagantank.ttser/data/voices`
+- Isolated GPU synthesis job (`python -m engine.s2_synth`) so a native abort cannot take down the GUI
+- One automatic retry of a crashed line in a fresh process; a second failure inserts silence and continues
+- Vulkan launch flags `GGML_VK_DISABLE_COOPMAT=1` and `GGML_VK_ALLOW_SYSMEM_FALLBACK=1` for RADV on AMD iGPUs
+
+### Changed
+
+- Bundled voice profile renamed from `tankvoice.s2voice` to `tankindycast.s2voice`
+- Vulkan keeps the audio codec on CPU (`codec_follow_backend=0`) so AR inference does not share a second Vulkan context on UMA memory
+- Settings download button is disabled when the selected GGUF is already on disk (label: **Модель уже скачана**)
+- Starting synthesis disables all main-window fields and buttons except **Стоп**
+- Stop on a GPU job terminates the child process immediately
+
+### Fixed
+
+- `vk::DeviceLostError` / RADV “context is lost” on AMD Radeon 780M no longer kills the whole application during long synthesis
+
+## [0.1.0] — 2026-08-19
+
+### Added
+
+- First public release: PySide6 desktop TTS for Fish Audio S2 Pro on Linux and macOS
+- Official `s2.cpp` git submodule and ctypes `libs2_*` backends (CPU, Vulkan, CUDA, Metal)
+- Line-oriented UTF-8 input, pronunciation dictionaries, WAV chunks concatenated to MP3 via ffmpeg
+- In-app Hugging Face download for `s2-pro-q4_k_m`, `s2-pro-q8_0`, and `s2-pro-f16`
+- Linux Flatpak (`com.tagantank.ttser`, Freedesktop 24.08)
+- GitHub Actions CI on `master`/PRs and Release publishing on `v*` tags
+
+[0.3.0]: https://github.com/tagantank/ttser/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/tagantank/ttser/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/tagantank/ttser/releases/tag/v0.1.0

@@ -2,14 +2,15 @@
 
 PySide6 desktop app for Linux and macOS that turns prepared UTF-8 text into MP3 using Fish Audio S2 Pro.
 
-Agent-oriented notes: [`AGENTS.md`](AGENTS.md). C++ engine: [`s2.cpp/AGENTS.md`](s2.cpp/AGENTS.md) after `make init-submodule`.
+Agent-oriented notes: [`AGENTS.md`](AGENTS.md). C++ engine: [`s2.cpp/AGENTS.md`](s2.cpp/AGENTS.md) after `make init-submodule`. Release notes: [`CHANGELOG.md`](CHANGELOG.md).
 
 ## What it does
 
 - Loads prepared UTF-8 text (`one line = one chunk`)
 - Optionally applies pronunciation dictionaries before synthesis
 - Uses one selected `libs2_*` plugin (`cpu`, `vulkan`, `cuda`, or `metal`)
-- Selects a voice profile from the main window (**Стандартный голос модели**, bundled `tankindycast`, or user `.s2voice` files)
+- Selects a voice profile from the main window (**Model default voice**, bundled `tankindycast`, or user `.s2voice` files)
+- English UI by default; switch to Russian in **Settings → Interface → Language**
 - Can stop synthesis (GPU jobs terminate the child process)
 - Downloads GGUF models from Hugging Face in Settings, with cancel on dialog close
 - Writes WAV chunks and concatenates a final MP3 (`128k`, needs `ffmpeg`)
@@ -121,7 +122,7 @@ python -m ttser
 
 Needs `ffmpeg` on `PATH` for the final MP3.
 
-Voice: pick **Стандартный голос модели** for the model default, or choose a saved profile such as `tankindycast`. Use **Создать голос** to encode a new `.s2voice` from reference audio and transcript.
+Voice: pick **Model default voice** for the model default, or choose a saved profile such as `tankindycast`. Use **Create voice** to encode a new `.s2voice` from reference audio and transcript.
 
 ## Dictionaries
 
@@ -130,7 +131,7 @@ Defaults:
 - `dictionaries/s2_terms_ru.json`
 - `dictionaries/s2_pronunciation_ru.json`
 
-In GUI (**Словари**): connect JSON files, edit rows (`from`, `to`, `note`), save back to disk. Toggle **Применять словари** on the main window.
+In GUI (**Dictionaries**): connect JSON files, edit rows (`from`, `to`, `note`), save back to disk. Toggle **Apply dictionaries** on the main window.
 
 Lines of the form `[pause 500ms]` become silence, not model output.
 
