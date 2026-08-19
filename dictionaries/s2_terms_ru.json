@@ -1,0 +1,7 @@
+[
+  {"from": "NASCAR", "to": "нас-кар", "note": "abbr"},
+  {"from": "IndyCar", "to": "инди-кар", "note": "series"},
+  {"from": "CART", "to": "карт", "note": "series"},
+  {"from": "Penske", "to": "пенске", "note": "name"},
+  {"from": "Indianapolis", "to": "Индиа-Наполис", "note": "city"}
+]

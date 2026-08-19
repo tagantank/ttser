@@ -1,0 +1,51 @@
+app-id: com.tagantank.ttser
+runtime: org.freedesktop.Platform
+runtime-version: "24.08"
+sdk: org.freedesktop.Sdk
+command: ttser-launch
+finish-args:
+  - --share=ipc
+  - --share=network
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --device=dri
+  - --filesystem=home
+  - --talk-name=org.freedesktop.FileManager1
+cleanup:
+  - /include
+  - "*.a"
+  - /lib/pkgconfig
+  - /share/man
+modules:
+  - name: s2-libs-prebuilt
+    buildsystem: simple
+    build-commands:
+      - install -d /app/lib/ttser
+      - install -Dm755 prebuilt/linux-x86_64/libs2_cpu.so /app/lib/ttser/libs2_cpu.so
+      - install -Dm755 prebuilt/linux-x86_64/libs2_vulkan.so /app/lib/ttser/libs2_vulkan.so
+      - install -Dm755 prebuilt/linux-x86_64/libggml-base.so /app/lib/ttser/libggml-base.so
+      - install -Dm755 prebuilt/linux-x86_64/libggml-cpu.so /app/lib/ttser/libggml-cpu.so
+      - install -Dm755 prebuilt/linux-x86_64/libggml.so /app/lib/ttser/libggml.so
+      - install -Dm755 prebuilt/linux-x86_64/libggml-vulkan.so /app/lib/ttser/libggml-vulkan.so
+      - install -d /app/share/ttser
+      - install -Dm644 prebuilt/linux-x86_64/tokenizer.json /app/share/ttser/tokenizer.json
+    sources:
+      - type: dir
+        path: .
+  - name: ttser
+    buildsystem: simple
+    build-commands:
+      - pip3 install --no-cache-dir --no-index --find-links=flatpak/wheels --prefix=/app PySide6
+      - pip3 install --no-build-isolation --no-deps --prefix=/app .
+      - install -Dm755 flatpak/ttser-launch.sh /app/bin/ttser-launch
+      - install -Dm644 flatpak/com.tagantank.ttser.desktop /app/share/applications/com.tagantank.ttser.desktop
+      - install -Dm644 flatpak/com.tagantank.ttser.metainfo.xml /app/share/metainfo/com.tagantank.ttser.metainfo.xml
+      - install -Dm644 flatpak/com.tagantank.ttser.png /app/share/icons/hicolor/256x256/apps/com.tagantank.ttser.png
+      - install -d /app/share/ttser/dictionaries
+      - install -Dm644 dictionaries/s2_terms_ru.json /app/share/ttser/dictionaries/s2_terms_ru.json
+      - install -Dm644 dictionaries/s2_pronunciation_ru.json /app/share/ttser/dictionaries/s2_pronunciation_ru.json
+      - install -d /app/share/ttser/voices
+      - install -Dm644 voices/tankvoice.s2voice /app/share/ttser/voices/tankvoice.s2voice
+    sources:
+      - type: dir
+        path: ..

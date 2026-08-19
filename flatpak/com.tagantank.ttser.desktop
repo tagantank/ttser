@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=ttser
+Comment=Fish Audio S2 Pro desktop TTS
+Exec=ttser-launch
+Icon=com.tagantank.ttser
+Terminal=false
+Categories=AudioVideo;Audio;Utility;
+StartupNotify=true

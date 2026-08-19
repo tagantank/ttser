@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+
+# OS / editor
+.DS_Store
+.idea/
+*.swp
+*~
+
+# Native plugin copies and lib-dev symlinks
+/lib/
+
+# Models, extra voice profiles, synthesis output
+*.gguf
+*.s2voice
+!/voices/tankvoice.s2voice
+*.part
+/output/
+
+# Flatpak builder cache, OSTree repo, and single-file bundle
+/.flatpak-builder/
+/build-flatpak/
+/repo/
+*.flatpak
+
+# Offline PySide wheels (pip download --dest flatpak/wheels PySide6)
+/flatpak/wheels/

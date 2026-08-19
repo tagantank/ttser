@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.tagantank.ttser</id>
+  <name>ttser</name>
+  <summary>Desktop TTS for Fish Audio S2 Pro</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <description>
+    <p>
+      ttser creates MP3 files from prepared text using Fish Audio S2 Pro.
+    </p>
+  </description>
+  <launchable type="desktop-id">com.tagantank.ttser.desktop</launchable>
+  <icon type="stock">com.tagantank.ttser</icon>
+  <provides>
+    <binary>ttser-launch</binary>
+  </provides>
+</component>

@@ -1,0 +1,16 @@
+---
+description: ttser project conventions for agents
+alwaysApply: true
+---
+
+# ttser
+
+Follow `AGENTS.md` in the repo root. Engine internals are in `s2.cpp/AGENTS.md`.
+
+- Desktop PySide6 app; synthesis is ctypes → `libs2_*`, not HTTP.
+- `s2.cpp` is an official GitHub submodule. Do not vendor it as a normal directory.
+- Rebuild Flatpak plugins inside `org.freedesktop.Sdk//24.08`. Host `.so` files fail with `GLIBC_2.43 not found`.
+- Qt `Signal(int)` is 32-bit. Never emit GGUF byte sizes; use percent + string for download progress.
+- Closing settings must cancel model download and delete the `.part` file.
+- Voice clone is optional (checkbox). Reference transcript is an internal `"."` placeholder.
+- Show a GPU backend in the GUI only if its library file exists.
