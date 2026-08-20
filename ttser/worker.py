@@ -19,7 +19,10 @@ from engine.s2_lib import (
     S2Library,
     chunk_wav_path,
     first_incomplete_index,
+    mark_chunk_skipped,
+    pad_speech_chunks,
     read_synth_status,
+    skip_marker_path,
     write_silence,
     write_synth_status,
 )
@@ -53,6 +56,16 @@ class SynthesisWorker(QThread):
         dictionaries_enabled: bool,
         voice_name: str | None = None,
         voice_dirs: list[str] | None = None,
+        n_gpu_layers: int = -1,
+        codec_follow_backend: int | None = None,
+        max_new_tokens: int = 1024,
+        temperature: float = 0.8,
+        top_p: float = 0.8,
+        top_k: int = 30,
+        min_tokens_before_end: int = 0,
+        line_pause_ms: int = 180,
+        verbose: bool = False,
+        log_level: int = 2,
     ):
         super().__init__()
         self.input_text = input_text
@@ -68,6 +81,16 @@ class SynthesisWorker(QThread):
         self.dictionaries_enabled = dictionaries_enabled
         self.voice_name = voice_name
         self.voice_dirs = voice_dirs
+        self.n_gpu_layers = n_gpu_layers
+        self.codec_follow_backend = codec_follow_backend
+        self.max_new_tokens = max_new_tokens
+        self.temperature = temperature
+        self.top_p = top_p
+        self.top_k = top_k
+        self.min_tokens_before_end = min_tokens_before_end
+        self.line_pause_ms = line_pause_ms
+        self.verbose = verbose
+        self.log_level = log_level
         self._cancel_requested = False
         self._child: subprocess.Popen[str] | None = None
 
@@ -100,6 +123,7 @@ class SynthesisWorker(QThread):
             if output_dir.is_dir():
                 for old in output_dir.glob("output_*.wav"):
                     old.unlink(missing_ok=True)
+                    skip_marker_path(old).unlink(missing_ok=True)
                 for name in (JOB_NAME, SYNTH_STATUS_NAME):
                     (output_dir / name).unlink(missing_ok=True)
 
@@ -111,6 +135,8 @@ class SynthesisWorker(QThread):
             if self._cancel_requested:
                 self.cancelled.emit()
                 return
+
+            pad_speech_chunks(lines, Path(self.wav_dir), self.line_pause_ms)
 
             prev = sys.argv[:]
             sys.argv = [
@@ -149,12 +175,20 @@ class SynthesisWorker(QThread):
             tokenizer_path=Path(self.tokenizer_path),
             backend_type=self.backend_type,
             gpu_device=self.gpu_device,
-            n_gpu_layers=-1 if self.backend_type in GPU_BACKENDS else 0,
+            n_gpu_layers=self.n_gpu_layers if self.backend_type in GPU_BACKENDS else 0,
             threads=self.threads,
             voice_name=self.voice_name,
             voice_dirs=voice_dirs,
             progress=lambda i, n, _: self.progress.emit(i, n),
             should_cancel=lambda: self._cancel_requested,
+            codec_follow_backend=self.codec_follow_backend,
+            max_new_tokens=self.max_new_tokens,
+            temperature=self.temperature,
+            top_p=self.top_p,
+            top_k=self.top_k,
+            min_tokens_before_end=self.min_tokens_before_end,
+            verbose=self.verbose,
+            log_level=self.log_level,
         )
 
     def _synthesize_isolated(self, lines: list[str]) -> None:
@@ -169,13 +203,22 @@ class SynthesisWorker(QThread):
             "tokenizer_path": self.tokenizer_path,
             "backend_type": self.backend_type,
             "gpu_device": self.gpu_device,
-            "n_gpu_layers": -1,
+            "n_gpu_layers": self.n_gpu_layers,
             "threads": self.threads,
             "voice_name": self.voice_name,
             "voice_dirs": self.voice_dirs,
+            "max_new_tokens": self.max_new_tokens,
+            "temperature": self.temperature,
+            "top_p": self.top_p,
+            "top_k": self.top_k,
+            "min_tokens_before_end": self.min_tokens_before_end,
+            "verbose": self.verbose,
+            "log_level": self.log_level,
         }
         if self.backend_type == 0:
             job["codec_follow_backend"] = 0
+        elif self.codec_follow_backend is not None:
+            job["codec_follow_backend"] = self.codec_follow_backend
         job_path.write_text(json.dumps(job, ensure_ascii=False), encoding="utf-8")
 
         line_attempts: dict[int, int] = {}
@@ -185,7 +228,7 @@ class SynthesisWorker(QThread):
             for _ in range(max_restarts):
                 if self._cancel_requested:
                     raise SynthesisCancelled()
-                missing = first_incomplete_index(len(lines), output_dir)
+                missing = first_incomplete_index(lines, output_dir)
                 if missing is None:
                     return
                 self.progress.emit(missing - 1, len(lines))
@@ -194,11 +237,11 @@ class SynthesisWorker(QThread):
                     raise SynthesisCancelled()
                 if rc == 2:
                     raise SynthesisCancelled()
-                if rc == 0 and first_incomplete_index(len(lines), output_dir) is None:
+                if rc == 0 and first_incomplete_index(lines, output_dir) is None:
                     return
 
                 status = read_synth_status(output_dir)
-                missing = first_incomplete_index(len(lines), output_dir)
+                missing = first_incomplete_index(lines, output_dir)
                 if missing is None:
                     return
                 if status in ("", "init"):
@@ -223,6 +266,7 @@ class SynthesisWorker(QThread):
                     continue
                 out = chunk_wav_path(output_dir, missing)
                 write_silence(out, 0.4)
+                mark_chunk_skipped(out)
                 write_synth_status(output_dir, f"skipped {missing}")
                 self.log.emit(
                     t(
@@ -232,7 +276,7 @@ class SynthesisWorker(QThread):
                     )
                 )
 
-            if first_incomplete_index(len(lines), output_dir) is not None:
+            if first_incomplete_index(lines, output_dir) is not None:
                 raise RuntimeError(t("worker.gpu_repeated_crash"))
         finally:
             job_path.unlink(missing_ok=True)

@@ -48,6 +48,13 @@ def main(argv: list[str] | None = None) -> int:
             progress=_progress,
             skip_existing=True,
             codec_follow_backend=job.get("codec_follow_backend"),
+            max_new_tokens=int(job.get("max_new_tokens", 1024)),
+            temperature=float(job.get("temperature", 0.8)),
+            top_p=float(job.get("top_p", 0.8)),
+            top_k=int(job.get("top_k", 30)),
+            min_tokens_before_end=int(job.get("min_tokens_before_end", 0)),
+            verbose=bool(job.get("verbose", False)),
+            log_level=int(job.get("log_level", 2)),
         )
     except SynthesisCancelled:
         return 2

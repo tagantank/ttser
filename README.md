@@ -135,6 +135,8 @@ In GUI (**Dictionaries**): connect JSON files, edit rows (`from`, `to`, `note`),
 
 Lines of the form `[pause 500ms]` become silence, not model output.
 
+By default each synthesized line also gets **180 ms** of trailing silence before the WAV chunks are concatenated (`Line pause` in the synthesis dialog). Set it to `0` to disable. Explicit `[pause …]` lines are left unchanged, and a speech line is not padded when the next line is already a pause.
+
 ## Build Flatpak (Linux)
 
 Manifest: `flatpak/com.tagantank.ttser.yml`. App id: `com.tagantank.ttser`.

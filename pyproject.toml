@@ -1,6 +1,6 @@
 [project]
 name = "ttser"
-version = "0.3.0"
+version = "0.4.0"
 description = "Desktop TTS app for Fish Audio S2 Pro"
 requires-python = ">=3.11"
 dependencies = [

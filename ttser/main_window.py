@@ -29,8 +29,16 @@ from engine.s2_voice import (
 from ttser.backends import backend_type_for, library_path_for_backend, normalize_backend
 from ttser.dictionary_editor import DictionaryEditorDialog
 from ttser.i18n import apply_language, t
-from ttser.settings import AppSettings, load_settings, save_settings
+from ttser.settings import (
+    AppSettings,
+    effective_codec_follow_backend,
+    effective_n_gpu_layers,
+    load_settings,
+    save_settings,
+)
 from ttser.settings_dialog import SettingsDialog
+from ttser.synth_dialog import SynthesisParamsDialog
+from ttser.synth_params import log_level_int
 from ttser.voice_create_dialog import VoiceCreateDialog
 from ttser.worker import SynthesisWorker
 
@@ -243,6 +251,14 @@ class MainWindow(QMainWindow):
             voice_name = voice_id
             voice_dirs = self.voice_dirs()
 
+        params_dialog = SynthesisParamsDialog(self.settings_obj, self)
+        if not params_dialog.exec():
+            return
+        params_dialog.apply_to_settings(self.settings_obj)
+        self.settings_obj.dictionaries_enabled = self.apply_dicts.isChecked()
+        self.settings_obj.selected_voice_id = self.selected_voice_id()
+        save_settings(self.settings_obj)
+
         text = input_file.read_text(encoding="utf-8")
         output_mp3.parent.mkdir(parents=True, exist_ok=True)
         wav_dir = output_mp3.with_suffix("").as_posix() + "_wav"
@@ -250,9 +266,6 @@ class MainWindow(QMainWindow):
         self._set_synthesis_running(True)
         self.progress.setValue(0)
         self.log.clear()
-        self.settings_obj.dictionaries_enabled = self.apply_dicts.isChecked()
-        self.settings_obj.selected_voice_id = self.selected_voice_id()
-        save_settings(self.settings_obj)
 
         self.worker = SynthesisWorker(
             input_text=text,
@@ -268,6 +281,16 @@ class MainWindow(QMainWindow):
             dictionaries_enabled=self.settings_obj.dictionaries_enabled,
             voice_name=voice_name,
             voice_dirs=voice_dirs,
+            n_gpu_layers=effective_n_gpu_layers(self.settings_obj),
+            codec_follow_backend=effective_codec_follow_backend(self.settings_obj),
+            max_new_tokens=self.settings_obj.max_new_tokens,
+            temperature=self.settings_obj.temperature,
+            top_p=self.settings_obj.top_p,
+            top_k=self.settings_obj.top_k,
+            min_tokens_before_end=self.settings_obj.min_tokens_before_end,
+            line_pause_ms=self.settings_obj.line_pause_ms,
+            verbose=self.settings_obj.verbose,
+            log_level=log_level_int(self.settings_obj.log_level),
         )
         self.worker.log.connect(self.log.appendPlainText)
         self.worker.progress.connect(self.on_progress)

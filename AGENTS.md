@@ -62,7 +62,8 @@ CPU synthesis stays in the GUI worker thread.
 - UI language: English default; Russian via **Settings → Interface → Language** (`ui_language` in `QSettings`, catalogs in `ttser/i18n.py`)
 - Cancel synthesis between lines via `should_cancel` → `SynthesisCancelled`. GPU jobs cancel by terminating the child process
 - Lines like `[pause 500ms]` become silence WAVs, not model calls
-- Vulkan: `codec_follow_backend=0`. GPU jobs use `python -m engine.s2_synth` with `skip_existing` so a DeviceLost abort can resume
+- After synthesis, `line_pause_ms` (default 180) appends trailing silence to each speech chunk before MP3 concat, unless the next line is already `[pause …]`
+- Vulkan: `codec_follow_backend=0`. GPU jobs use `python -m engine.s2_synth` with `skip_existing` so a DeviceLost abort can resume. Speech chunks that are silent or far shorter than the generated PCM are treated as incomplete and retried.
 
 ## Qt pitfalls
 

@@ -5,6 +5,24 @@ All notable changes to ttser are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] — 2026-08-20
+
+### Added
+
+- Synthesis parameters dialog before starting synthesis: sampling, threads, log level, GPU layers, codec placement, and device index filtered by the selected backend (CPU / Vulkan / CUDA / Metal)
+- Configurable trailing silence after each synthesized line (`line_pause_ms`, default 180) so concatenated MP3 chunks do not butt together
+- Per-parameter help buttons with English and Russian explanations from the s2.cpp README
+- Reset button that restores synthesis parameter defaults without changing the selected backend, model, or voice
+
+### Changed
+
+- Generation parameters are no longer hard-coded in `engine/s2_lib.py`; confirmed dialog values are saved in QSettings and reused on the next run
+- Vulkan keeps the audio codec on CPU even if a previous run saved GPU codec placement; the synthesis dialog no longer offers GPU codec for Vulkan
+
+### Fixed
+
+- Speech WAV chunks that are silence or much shorter than the generated PCM are no longer treated as complete after a GPU abort, so they are resynthesized instead of concatenated into the MP3
+
 ## [0.3.0] — 2026-08-20
 
 ### Added
@@ -50,6 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Linux Flatpak (`com.tagantank.ttser`, Freedesktop 24.08)
 - GitHub Actions CI on `master`/PRs and Release publishing on `v*` tags
 
+[0.4.0]: https://github.com/tagantank/ttser/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/tagantank/ttser/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/tagantank/ttser/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/tagantank/ttser/releases/tag/v0.1.0

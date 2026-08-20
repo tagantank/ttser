@@ -123,8 +123,7 @@ _CATALOG: dict[str, dict[str, str]] = {
         "worker.pronunciation_replacements": "Pronunciation replacements: {total}",
         "worker.gpu_init_retry": "GPU pipeline died during init; retrying...",
         "worker.gpu_device_lost": (
-            "GPU device lost on line {line} ({snippet}); "
-            "retrying with a fresh process..."
+            "Line {line} failed ({snippet}); retrying in a fresh process..."
         ),
         "worker.gpu_skip_line": (
             "Skipping line {line} after repeated GPU crash "
@@ -138,6 +137,85 @@ _CATALOG: dict[str, dict[str, str]] = {
         "download.downloading": "Downloading {filename}...",
         "dialog.ok": "OK",
         "dialog.cancel": "Cancel",
+        "synth.title": "Synthesis parameters",
+        "synth.start": "Synthesize",
+        "synth.reset": "Reset",
+        "synth.backend_hint": "Backend: {backend}",
+        "synth.codec_cpu": "CPU",
+        "synth.codec_gpu": "GPU",
+        "synth.param.max_new_tokens.label": "Max tokens",
+        "synth.param.max_new_tokens.help": (
+            "Maximum number of tokens to generate for each line "
+            "(--max-tokens). Quality often degrades after about 800 tokens "
+            "(~37 s of audio); split long text into lines."
+        ),
+        "synth.param.temperature.label": "Temperature",
+        "synth.param.temperature.help": (
+            "Sampling temperature (--temperature). Higher values make speech "
+            "more varied; lower values are more stable and predictable. Default 0.8."
+        ),
+        "synth.param.top_p.label": "Top-p",
+        "synth.param.top_p.help": (
+            "Nucleus sampling (--top-p). Only tokens within the top probability "
+            "mass are considered. Default 0.8."
+        ),
+        "synth.param.top_k.label": "Top-k",
+        "synth.param.top_k.help": (
+            "Top-k sampling (--top-k). Limits candidates to the k most likely "
+            "tokens. Default 30."
+        ),
+        "synth.param.min_tokens_before_end.label": "Min tokens before EOS",
+        "synth.param.min_tokens_before_end.help": (
+            "Minimum tokens before end-of-sequence is allowed "
+            "(--min-tokens-before-end). 0 matches fish-speech defaults; "
+            "non-zero values bias against early stopping."
+        ),
+        "synth.param.line_pause_ms.label": "Line pause (ms)",
+        "synth.param.line_pause_ms.help": (
+            "Silence appended after each synthesized line before WAV chunks "
+            "are concatenated. This makes the joined MP3 sound less like hard "
+            "cuts. 0 disables the extra gap. Default 180 ms, matching s2.cpp "
+            "sentence_pause_ms. Explicit [pause ...] lines are left as-is, "
+            "and a speech line is not padded when the next line is already a pause."
+        ),
+        "synth.param.threads.label": "Threads",
+        "synth.param.threads.help": (
+            "CPU worker threads (--threads). 0 uses hardware concurrency "
+            "(or 4 if unavailable). Also used when encoding reference audio."
+        ),
+        "synth.param.log_level.label": "Log level",
+        "synth.param.log_level.help": (
+            "Runtime log verbosity (SetS2LogLevel): error, warn, info, or debug. "
+            "Default is info."
+        ),
+        "synth.param.verbose.label": "Verbose generation",
+        "synth.param.verbose.help": (
+            "Extra per-step generation logging inside the model "
+            "(GenerateParams.verbose)."
+        ),
+        "synth.param.n_gpu_layers.label": "GPU layers",
+        "synth.param.n_gpu_layers.help": (
+            "Transformer layers offloaded to GPU (--gpu-layers). "
+            "-1 = all layers when a GPU backend is selected; 0 = CPU only. "
+            "Fewer layers use less VRAM but are slower. The KV cache still "
+            "goes to GPU when any layer is offloaded."
+        ),
+        "synth.param.gpu_device.label": "GPU device",
+        "synth.param.gpu_device.help": (
+            "GPU device index (--vulkan / --cuda). 0 is the first device."
+        ),
+        "synth.param.codec_follow_backend.label": "Audio codec",
+        "synth.param.codec_follow_backend.help": (
+            "Where the audio codec runs. CPU keeps the codec on the CPU "
+            "(--codec-cpu). GPU lets the codec follow the selected backend "
+            "(--codec-follow-backend / --codec-auto). Vulkan always uses the "
+            "CPU codec: a GPU codec on shared iGPU memory creates a second "
+            "Vulkan context and can decode to silence or truncated WAV files."
+        ),
+        "synth.log.error": "error",
+        "synth.log.warn": "warn",
+        "synth.log.info": "info",
+        "synth.log.debug": "debug",
     },
     "ru": {
         "main.title": "ttser — Fish Audio S2 Pro",
@@ -247,8 +325,7 @@ _CATALOG: dict[str, dict[str, str]] = {
         "worker.pronunciation_replacements": "Замены произношения: {total}",
         "worker.gpu_init_retry": "GPU pipeline упал при инициализации; повтор...",
         "worker.gpu_device_lost": (
-            "GPU device lost на строке {line} ({snippet}); "
-            "повтор в новом процессе..."
+            "Строка {line} не удалась ({snippet}); повтор в новом процессе..."
         ),
         "worker.gpu_skip_line": (
             "Пропуск строки {line} после повторного сбоя GPU "
@@ -263,6 +340,85 @@ _CATALOG: dict[str, dict[str, str]] = {
         "download.downloading": "Скачивание {filename}...",
         "dialog.ok": "ОК",
         "dialog.cancel": "Отмена",
+        "synth.title": "Параметры синтеза",
+        "synth.start": "Синтез",
+        "synth.reset": "Сброс",
+        "synth.backend_hint": "Движок: {backend}",
+        "synth.codec_cpu": "CPU",
+        "synth.codec_gpu": "GPU",
+        "synth.param.max_new_tokens.label": "Макс. токенов",
+        "synth.param.max_new_tokens.help": (
+            "Максимум токенов на строку (--max-tokens). После примерно 800 токенов "
+            "(~37 с аудио) качество часто падает — длинный текст лучше разбивать "
+            "на строки."
+        ),
+        "synth.param.temperature.label": "Температура",
+        "synth.param.temperature.help": (
+            "Температура сэмплирования (--temperature). Выше — речь разнообразнее; "
+            "ниже — стабильнее и предсказуемее. По умолчанию 0.8."
+        ),
+        "synth.param.top_p.label": "Top-p",
+        "synth.param.top_p.help": (
+            "Nucleus sampling (--top-p). Учитываются только токены в верхней "
+            "доле вероятностной массы. По умолчанию 0.8."
+        ),
+        "synth.param.top_k.label": "Top-k",
+        "synth.param.top_k.help": (
+            "Top-k sampling (--top-k). Ограничивает кандидатов k наиболее "
+            "вероятными токенами. По умолчанию 30."
+        ),
+        "synth.param.min_tokens_before_end.label": "Мин. токенов до EOS",
+        "synth.param.min_tokens_before_end.help": (
+            "Минимум токенов до разрешения конца последовательности "
+            "(--min-tokens-before-end). 0 — как в fish-speech; ненулевые значения "
+            "сдерживают раннюю остановку."
+        ),
+        "synth.param.line_pause_ms.label": "Пауза после строки (мс)",
+        "synth.param.line_pause_ms.help": (
+            "Тишина в конце каждой озвученной строки перед склейкой WAV в MP3. "
+            "Так стыки чанков звучат естественнее, а не как резкий монтаж. "
+            "0 отключает добавление паузы. По умолчанию 180 мс, как sentence_pause_ms "
+            "в s2.cpp. Строки [pause ...] не меняются; если следующая строка уже "
+            "пауза, дополнительная тишина не добавляется."
+        ),
+        "synth.param.threads.label": "Потоки",
+        "synth.param.threads.help": (
+            "Число CPU-потоков (--threads). 0 — авто (число ядер или 4). "
+            "Также используется при кодировании reference-аудио."
+        ),
+        "synth.param.log_level.label": "Уровень логов",
+        "synth.param.log_level.help": (
+            "Подробность логов (SetS2LogLevel): error, warn, info или debug. "
+            "По умолчанию info."
+        ),
+        "synth.param.verbose.label": "Подробный генератор",
+        "synth.param.verbose.help": (
+            "Дополнительные пошаговые логи генерации "
+            "(GenerateParams.verbose)."
+        ),
+        "synth.param.n_gpu_layers.label": "Слои на GPU",
+        "synth.param.n_gpu_layers.help": (
+            "Сколько слоёв трансформера вынести на GPU (--gpu-layers). "
+            "-1 — все слои при GPU-бэкенде; 0 — только CPU. Меньше слоёв — "
+            "меньше VRAM, но медленнее. KV-кэш всё равно на GPU, если "
+            "хотя бы один слой на GPU."
+        ),
+        "synth.param.gpu_device.label": "GPU device",
+        "synth.param.gpu_device.help": (
+            "Индекс GPU-устройства (--vulkan / --cuda). 0 — первое устройство."
+        ),
+        "synth.param.codec_follow_backend.label": "Аудиокодек",
+        "synth.param.codec_follow_backend.help": (
+            "Где выполняется аудиокодек. CPU — кодек на процессоре (--codec-cpu). "
+            "GPU — кодек следует выбранному бэкенду (--codec-follow-backend / "
+            "--codec-auto). На Vulkan кодек всегда на CPU: GPU-кодек в общей "
+            "памяти iGPU создаёт второй Vulkan-контекст и может записать тишину "
+            "или обрезанный WAV."
+        ),
+        "synth.log.error": "error",
+        "synth.log.warn": "warn",
+        "synth.log.info": "info",
+        "synth.log.debug": "debug",
     },
 }
 

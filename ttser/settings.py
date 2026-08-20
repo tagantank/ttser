@@ -11,6 +11,20 @@ from engine.s2_voice import DEFAULT_VOICE_ID, preferred_voice_id, voice_search_d
 from ttser.backends import normalize_backend, resolve_library_path
 from ttser.i18n import DEFAULT_LANGUAGE, normalize_language
 from ttser.model_catalog import find_downloaded_model, model_by_filename, model_by_id
+from ttser.synth_params import (
+    DEFAULT_LOG_LEVEL,
+    DEFAULT_MAX_NEW_TOKENS,
+    DEFAULT_MIN_TOKENS_BEFORE_END,
+    DEFAULT_LINE_PAUSE_MS,
+    DEFAULT_N_GPU_LAYERS,
+    DEFAULT_TEMPERATURE,
+    DEFAULT_THREADS,
+    DEFAULT_TOP_K,
+    DEFAULT_TOP_P,
+    DEFAULT_VERBOSE,
+    default_codec_follow_backend,
+    normalize_log_level,
+)
 
 
 def default_dictionary_paths() -> list[str]:
@@ -62,7 +76,17 @@ def default_voice_dir() -> str:
 class AppSettings:
     backend: str = "cpu"
     vulkan_device: int = 0
-    threads: int = 8
+    threads: int = DEFAULT_THREADS
+    max_new_tokens: int = DEFAULT_MAX_NEW_TOKENS
+    temperature: float = DEFAULT_TEMPERATURE
+    top_p: float = DEFAULT_TOP_P
+    top_k: int = DEFAULT_TOP_K
+    min_tokens_before_end: int = DEFAULT_MIN_TOKENS_BEFORE_END
+    line_pause_ms: int = DEFAULT_LINE_PAUSE_MS
+    n_gpu_layers: int = DEFAULT_N_GPU_LAYERS
+    codec_follow_backend: int | None = None
+    log_level: str = DEFAULT_LOG_LEVEL
+    verbose: bool = DEFAULT_VERBOSE
     model_path: str = "s2.cpp/models/s2-pro-q8_0.gguf"
     models_dir: str = field(default_factory=default_models_dir)
     selected_model_id: str = "q8_0"
@@ -76,6 +100,18 @@ class AppSettings:
     dictionaries_enabled: bool = True
     selected_voice_id: str = DEFAULT_VOICE_ID
     ui_language: str = DEFAULT_LANGUAGE
+
+
+def effective_codec_follow_backend(settings: AppSettings) -> int:
+    if settings.codec_follow_backend is not None:
+        return 1 if settings.codec_follow_backend else 0
+    return default_codec_follow_backend(settings.backend)
+
+
+def effective_n_gpu_layers(settings: AppSettings) -> int:
+    if settings.backend == "cpu":
+        return 0
+    return settings.n_gpu_layers
 
 
 def _adjust_defaults(settings: AppSettings) -> None:
@@ -141,10 +177,28 @@ def load_settings() -> AppSettings:
     default_dicts = default_dictionary_paths()
     stored_voice_id = q.value("selected_voice_id")
     legacy_ref_enabled = bool(q.value("reference_voice_enabled", False))
+    codec_raw = q.value("codec_follow_backend")
+    codec_follow: int | None
+    if codec_raw is None:
+        codec_follow = None
+    else:
+        codec_follow = 1 if int(codec_raw) else 0
     s = AppSettings(
         backend=q.value("backend", "cpu"),
         vulkan_device=int(q.value("vulkan_device", 0)),
-        threads=int(q.value("threads", 8)),
+        threads=int(q.value("threads", DEFAULT_THREADS)),
+        max_new_tokens=int(q.value("max_new_tokens", DEFAULT_MAX_NEW_TOKENS)),
+        temperature=float(q.value("temperature", DEFAULT_TEMPERATURE)),
+        top_p=float(q.value("top_p", DEFAULT_TOP_P)),
+        top_k=int(q.value("top_k", DEFAULT_TOP_K)),
+        min_tokens_before_end=int(
+            q.value("min_tokens_before_end", DEFAULT_MIN_TOKENS_BEFORE_END)
+        ),
+        line_pause_ms=int(q.value("line_pause_ms", DEFAULT_LINE_PAUSE_MS)),
+        n_gpu_layers=int(q.value("n_gpu_layers", DEFAULT_N_GPU_LAYERS)),
+        codec_follow_backend=codec_follow,
+        log_level=normalize_log_level(q.value("log_level", DEFAULT_LOG_LEVEL)),
+        verbose=bool(q.value("verbose", DEFAULT_VERBOSE)),
         model_path=q.value("model_path", "s2.cpp/models/s2-pro-q8_0.gguf"),
         models_dir=q.value("models_dir", default_models_dir()),
         selected_model_id=q.value("selected_model_id", "q8_0"),
@@ -202,6 +256,19 @@ def save_settings(s: AppSettings) -> None:
     q.setValue("backend", s.backend)
     q.setValue("vulkan_device", s.vulkan_device)
     q.setValue("threads", s.threads)
+    q.setValue("max_new_tokens", s.max_new_tokens)
+    q.setValue("temperature", s.temperature)
+    q.setValue("top_p", s.top_p)
+    q.setValue("top_k", s.top_k)
+    q.setValue("min_tokens_before_end", s.min_tokens_before_end)
+    q.setValue("line_pause_ms", s.line_pause_ms)
+    q.setValue("n_gpu_layers", s.n_gpu_layers)
+    if s.codec_follow_backend is None:
+        q.remove("codec_follow_backend")
+    else:
+        q.setValue("codec_follow_backend", int(s.codec_follow_backend))
+    q.setValue("log_level", normalize_log_level(s.log_level))
+    q.setValue("verbose", s.verbose)
     q.setValue("model_path", s.model_path)
     q.setValue("models_dir", s.models_dir)
     q.setValue("selected_model_id", s.selected_model_id)
