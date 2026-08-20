@@ -6,11 +6,14 @@ from pathlib import Path
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 
+from engine.runtime import resource_root
 from ttser.i18n import apply_language
 from ttser.main_window import MainWindow
 from ttser.settings import load_settings
 
-ICON_PATH = Path(__file__).resolve().parent / "resources" / "icon.png"
+_PACKAGE_ICON = Path(__file__).resolve().parent / "resources" / "icon.png"
+_BUNDLE_ICON = resource_root() / "ttser" / "resources" / "icon.png"
+ICON_PATH = _PACKAGE_ICON if _PACKAGE_ICON.is_file() else _BUNDLE_ICON
 
 
 def main() -> int:

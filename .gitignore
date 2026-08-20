@@ -25,6 +25,12 @@ venv/
 *.part
 /output/
 
+# macOS bundle scratch
+/macos/payload/
+/macos/icon.iconset/
+/macos/ttser.icns
+*.dmg
+
 # Flatpak builder cache, OSTree repo, and single-file bundle
 /.flatpak-builder/
 /build-flatpak/

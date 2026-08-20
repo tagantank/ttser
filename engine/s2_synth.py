@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from engine.errors import SynthesisCancelled
+from engine.runtime import prepend_library_path
 from engine.s2_lib import S2Library, write_synth_status
 
 
@@ -23,9 +24,7 @@ def main(argv: list[str] | None = None) -> int:
     job = json.loads(args.job.read_text(encoding="utf-8"))
     output_dir = Path(job["output_dir"])
     library_path = Path(job["library_path"])
-    lib_dir = library_path.parent
-    prev_ld = os.environ.get("LD_LIBRARY_PATH", "")
-    os.environ["LD_LIBRARY_PATH"] = f"{lib_dir}:{prev_ld}" if prev_ld else str(lib_dir)
+    prepend_library_path(os.environ, library_path.parent)
 
     write_synth_status(output_dir, "init")
     lib = S2Library(library_path)

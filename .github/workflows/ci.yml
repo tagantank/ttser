@@ -14,6 +14,44 @@ permissions:
   contents: read
 
 jobs:
+  macos:
+    name: macOS DMG
+    runs-on: macos-15
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install native tools
+        run: brew install cmake ffmpeg
+
+      - name: Install Python deps
+        run: |
+          python3 -m venv .venv
+          source .venv/bin/activate
+          python -m pip install -U pip
+          python -m pip install -e . 'PySide6==6.11.2' 'pyinstaller>=6.3'
+
+      - name: Build unsigned .app / .dmg
+        env:
+          JOBS: "3"
+        run: |
+          source .venv/bin/activate
+          bash macos/build_app.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ttser-macos-arm64
+          path: |
+            dist/ttser-*.dmg
+            dist/ttser-*.dmg.sha256
+          if-no-files-found: error
+
   flatpak:
     name: Flatpak
     runs-on: ubuntu-latest

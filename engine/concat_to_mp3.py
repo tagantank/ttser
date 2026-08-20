@@ -6,6 +6,8 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+from engine.runtime import ffmpeg_binary
+
 
 def main() -> int:
     parser = argparse.ArgumentParser()
@@ -26,7 +28,7 @@ def main() -> int:
         for wav in files:
             f.write(f"file '{wav.resolve()}'\n")
 
-    cmd = ["ffmpeg", "-hide_banner", "-loglevel", "error"]
+    cmd = [ffmpeg_binary(), "-hide_banner", "-loglevel", "error"]
     cmd += ["-y" if args.overwrite else "-n"]
     cmd += ["-f", "concat", "-safe", "0", "-i", str(list_file)]
     cmd += ["-c:a", "libmp3lame", "-b:a", args.bitrate]

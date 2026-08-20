@@ -13,6 +13,7 @@ from PySide6.QtCore import QThread, Signal
 
 from engine.concat_to_mp3 import main as concat_main
 from engine.errors import SynthesisCancelled
+from engine.runtime import prepend_library_path, synth_child_command
 from engine.pronunciation import apply_rules, load_rules
 from engine.s2_lib import (
     SYNTH_STATUS_NAME,
@@ -162,9 +163,7 @@ class SynthesisWorker(QThread):
             self.failed.emit(str(exc))
 
     def _synthesize_in_process(self, lines: list[str]) -> None:
-        lib_dir = Path(self.library_path).parent
-        prev_ld = os.environ.get("LD_LIBRARY_PATH", "")
-        os.environ["LD_LIBRARY_PATH"] = f"{lib_dir}:{prev_ld}" if prev_ld else str(lib_dir)
+        prepend_library_path(os.environ, Path(self.library_path).parent)
 
         lib = S2Library(Path(self.library_path))
         voice_dirs = [Path(path) for path in self.voice_dirs] if self.voice_dirs else None
@@ -282,16 +281,13 @@ class SynthesisWorker(QThread):
             job_path.unlink(missing_ok=True)
 
     def _run_synth_child(self, job_path: Path) -> int:
-        env = os.environ.copy()
-        lib_dir = Path(self.library_path).parent
-        prev_ld = env.get("LD_LIBRARY_PATH", "")
-        env["LD_LIBRARY_PATH"] = f"{lib_dir}:{prev_ld}" if prev_ld else str(lib_dir)
+        env = prepend_library_path(os.environ.copy(), Path(self.library_path).parent)
         env["PYTHONUNBUFFERED"] = "1"
         if self.backend_type == 0:
             env.setdefault("GGML_VK_DISABLE_COOPMAT", "1")
             env.setdefault("GGML_VK_ALLOW_SYSMEM_FALLBACK", "1")
 
-        cmd = [sys.executable, "-m", "engine.s2_synth", "--job", str(job_path)]
+        cmd = synth_child_command(job_path)
         self._child = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,

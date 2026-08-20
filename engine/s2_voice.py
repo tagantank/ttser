@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-import os
 import re
 import struct
 from dataclasses import dataclass
 from pathlib import Path
+
+from engine.runtime import is_flatpak, is_frozen, resource_root, user_data_dir
 
 MAGIC = b"S2VOICE\x00"
 VERSION = 1
@@ -29,16 +30,16 @@ class VoiceProfile:
 
 
 def bundled_voice_dir() -> Path:
-    in_flatpak = os.environ.get("FLATPAK_ID") == "com.tagantank.ttser"
-    if in_flatpak:
+    if is_flatpak():
         return Path("/app/share/ttser/voices")
+    if is_frozen():
+        return resource_root() / "voices"
     return Path("voices")
 
 
 def user_voice_dir() -> Path:
-    in_flatpak = os.environ.get("FLATPAK_ID") == "com.tagantank.ttser"
-    if in_flatpak:
-        return Path.home() / ".var" / "app" / "com.tagantank.ttser" / "data" / "voices"
+    if is_flatpak() or is_frozen():
+        return user_data_dir() / "voices"
     return Path("voices")
 
 

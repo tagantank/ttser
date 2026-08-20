@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import os
 import platform
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from PySide6.QtCore import QSettings
 
+from engine.runtime import is_flatpak, is_frozen, resource_root, user_data_dir
 from engine.s2_voice import DEFAULT_VOICE_ID, preferred_voice_id, voice_search_dirs
 from ttser.backends import normalize_backend, resolve_library_path
 from ttser.i18n import DEFAULT_LANGUAGE, normalize_language
@@ -28,23 +28,27 @@ from ttser.synth_params import (
 
 
 def default_dictionary_paths() -> list[str]:
-    in_flatpak = os.environ.get("FLATPAK_ID") == "com.tagantank.ttser"
-    if in_flatpak:
-        base = "/app/share/ttser/dictionaries"
-        return [
-            f"{base}/s2_terms_ru.json",
-            f"{base}/s2_pronunciation_ru.json",
-        ]
+    if is_flatpak():
+        base = Path("/app/share/ttser/dictionaries")
+        return [str(base / "s2_terms_ru.json"), str(base / "s2_pronunciation_ru.json")]
+    if is_frozen():
+        base = resource_root() / "dictionaries"
+        return [str(base / "s2_terms_ru.json"), str(base / "s2_pronunciation_ru.json")]
     return [
         "dictionaries/s2_terms_ru.json",
         "dictionaries/s2_pronunciation_ru.json",
     ]
 
 
+def user_dictionary_dir() -> Path:
+    if is_flatpak() or is_frozen():
+        return user_data_dir() / "dictionaries"
+    return Path("dictionaries")
+
+
 def default_models_dir() -> str:
-    in_flatpak = os.environ.get("FLATPAK_ID") == "com.tagantank.ttser"
-    if in_flatpak:
-        return str(Path.home() / ".var" / "app" / "com.tagantank.ttser" / "data" / "models")
+    if is_flatpak() or is_frozen():
+        return str(user_data_dir() / "models")
     return "s2.cpp/models"
 
 
@@ -66,9 +70,10 @@ def model_lookup_dirs(models_dir: str | None = None) -> list[str]:
 
 
 def default_voice_dir() -> str:
-    in_flatpak = os.environ.get("FLATPAK_ID") == "com.tagantank.ttser"
-    if in_flatpak:
+    if is_flatpak():
         return "/app/share/ttser/voices"
+    if is_frozen():
+        return str(resource_root() / "voices")
     return "voices"
 
 
@@ -114,20 +119,45 @@ def effective_n_gpu_layers(settings: AppSettings) -> int:
     return settings.n_gpu_layers
 
 
+def _bundled_lib(name: str) -> str:
+    root = resource_root()
+    nested = {
+        "libs2_cpu.dylib": root / "lib" / "cpu" / "libs2_cpu.dylib",
+        "libs2_cpu.so": root / "lib" / "cpu" / "libs2_cpu.so",
+        "libs2_metal.dylib": root / "lib" / "metal" / "libs2_metal.dylib",
+    }.get(name)
+    if nested is not None and nested.is_file():
+        return str(nested)
+    return str(root / "lib" / name)
+
+
 def _adjust_defaults(settings: AppSettings) -> None:
-    in_flatpak = os.environ.get("FLATPAK_ID") == "com.tagantank.ttser"
-    if in_flatpak:
+    if is_flatpak():
         settings.lib_cpu = "/app/lib/ttser/libs2_cpu.so"
         settings.lib_vulkan = "/app/lib/ttser/libs2_vulkan.so"
         settings.lib_cuda = "/app/lib/ttser/libs2_cuda.so"
         settings.lib_metal = "/app/lib/ttser/libs2_metal.dylib"
         settings.tokenizer_path = "/app/share/ttser/tokenizer.json"
         settings.voice_dir = default_voice_dir()
+    if is_frozen():
+        suffix = ".dylib" if platform.system() == "Darwin" else ".so"
+        settings.lib_cpu = _bundled_lib(f"libs2_cpu{suffix}")
+        settings.lib_metal = _bundled_lib("libs2_metal.dylib")
+        tokenizer = resource_root() / "s2.cpp" / "tokenizer.json"
+        if not tokenizer.is_file():
+            tokenizer = resource_root() / "tokenizer.json"
+        settings.tokenizer_path = str(tokenizer)
+        settings.voice_dir = default_voice_dir()
+        settings.dictionary_paths = default_dictionary_paths()
+        models_dir = Path(default_models_dir())
+        settings.models_dir = str(models_dir)
+        settings.model_path = str(models_dir / Path(settings.model_path).name)
     if platform.system() == "Darwin":
-        settings.lib_cpu = "lib/libs2_cpu.dylib"
+        if not is_frozen() and not is_flatpak():
+            settings.lib_cpu = "lib/libs2_cpu.dylib"
         if settings.backend in {"vulkan", "cuda"}:
             settings.backend = "cpu"
-        if in_flatpak:
+        if is_flatpak():
             settings.lib_cpu = "/app/lib/ttser/libs2_cpu.dylib"
 
 
@@ -142,6 +172,8 @@ def _migrate_tokenizer_path(settings: AppSettings) -> None:
     path = Path(settings.tokenizer_path)
     candidates = [
         path,
+        resource_root() / "s2.cpp" / "tokenizer.json",
+        resource_root() / "tokenizer.json",
         Path("s2.cpp/tokenizer.json"),
         Path("s2.cpp/models/tokenizer.json"),
     ]
@@ -168,7 +200,7 @@ def _migrate_model_paths(settings: AppSettings) -> None:
 
 def load_settings() -> AppSettings:
     q = QSettings("ttser", "ttser")
-    in_flatpak = os.environ.get("FLATPAK_ID") == "com.tagantank.ttser"
+    in_flatpak = is_flatpak()
     default_tokenizer = "/app/share/ttser/tokenizer.json" if in_flatpak else "s2.cpp/tokenizer.json"
     default_cpu = "/app/lib/ttser/libs2_cpu.so" if in_flatpak else "lib/libs2_cpu.so"
     default_vk = "/app/lib/ttser/libs2_vulkan.so" if in_flatpak else "lib/libs2_vulkan.so"

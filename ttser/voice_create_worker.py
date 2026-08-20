@@ -5,6 +5,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QThread, Signal
 
+from engine.runtime import prepend_library_path
 from engine.s2_lib import S2Library
 from ttser.backends import backend_type_for
 from ttser.settings import AppSettings
@@ -40,9 +41,7 @@ class VoiceCreateWorker(QThread):
 
     def run(self) -> None:
         try:
-            lib_dir = Path(self.library_path).parent
-            prev_ld = os.environ.get("LD_LIBRARY_PATH", "")
-            os.environ["LD_LIBRARY_PATH"] = f"{lib_dir}:{prev_ld}" if prev_ld else str(lib_dir)
+            prepend_library_path(os.environ, Path(self.library_path).parent)
 
             settings = AppSettings(backend=self.backend, vulkan_device=self.gpu_device)
             backend_type = backend_type_for(settings)

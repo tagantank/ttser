@@ -5,10 +5,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from engine.runtime import resource_root
+
 if TYPE_CHECKING:
     from ttser.settings import AppSettings
-
-REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 def _library_filenames() -> dict[str, str]:
@@ -29,16 +29,25 @@ def _library_filenames() -> dict[str, str]:
 
 def library_candidates(lib_attr: str) -> list[Path]:
     filename = _library_filenames()[lib_attr]
-    candidates = [REPO_ROOT / "lib" / filename]
+    root = resource_root()
+    nested = {
+        "lib_cpu": "cpu",
+        "lib_metal": "metal",
+        "lib_vulkan": "vulkan",
+        "lib_cuda": "cuda",
+    }.get(lib_attr)
+    candidates = [root / "lib" / filename]
+    if nested:
+        candidates.insert(0, root / "lib" / nested / filename)
     if platform.system() == "Linux":
-        candidates.append(REPO_ROOT / "flatpak" / "prebuilt" / "linux-x86_64" / filename)
+        candidates.append(root / "flatpak" / "prebuilt" / "linux-x86_64" / filename)
         build_name = {
             "lib_cpu": "build-cpu-sdk",
             "lib_vulkan": "build-vulkan-sdk",
             "lib_cuda": "build-cuda",
         }.get(lib_attr)
         if build_name:
-            candidates.append(REPO_ROOT / "s2.cpp" / build_name / "libs2.so")
+            candidates.append(root / "s2.cpp" / build_name / "libs2.so")
     return candidates
 
 

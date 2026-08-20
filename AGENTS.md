@@ -26,6 +26,7 @@ This is **not** an HTTP TTS server. The `s2` CLI/server in the submodule is unus
 | `s2.cpp/` | **git submodule** — official `https://github.com/rodrigomatta/s2.cpp.git` |
 | `voices/` | bundled `tankindycast.s2voice` |
 | `flatpak/` | manifest, launch script, prebuilt libs, SPIR-V headers, offline wheels |
+| `macos/` | unsigned `.app` / `.dmg` (PyInstaller spec + collect script) |
 | `lib/` | local plugin copies/symlinks (`make libs` / `make lib-dev`); gitignored |
 
 Never vendor `s2.cpp` as a regular directory. Add it as a submodule (`git submodule add` / `make init-submodule`). Tokenizer is `s2.cpp/tokenizer.json`. The GitLab `s2.cpp` fork is not used.
@@ -49,7 +50,7 @@ Set `LD_LIBRARY_PATH` to the library directory **before** `ctypes.CDLL` (native 
 
 Vulkan `InitializeS2PipelineFromFiles` must pass `codec_follow_backend=0` (CPU codec). Auto-benchmarking the codec onto the GPU creates a second Vulkan context on the same UMA heap; on AMD Radeon 780M / RADV this contributes to `vk::DeviceLostError` during long `eval_cached` runs.
 
-GPU synthesis (Vulkan/CUDA/Metal) runs in a child process (`python -m engine.s2_synth`). ggml `vk::DeviceLostError` calls `terminate()` and cannot be caught in the GUI process. On abort the worker retries the failed line once in a fresh process, then inserts silence and continues. Flatpak launch sets `GGML_VK_DISABLE_COOPMAT=1` and `GGML_VK_ALLOW_SYSMEM_FALLBACK=1` (RADV coopmat DeviceLost on Phoenix).
+GPU synthesis (Vulkan/CUDA/Metal) runs in a child process (`python -m engine.s2_synth`, or `ttser-synth` inside the macOS `.app`). ggml `vk::DeviceLostError` calls `terminate()` and cannot be caught in the GUI process. On abort the worker retries the failed line once in a fresh process, then inserts silence and continues. Flatpak launch sets `GGML_VK_DISABLE_COOPMAT=1` and `GGML_VK_ALLOW_SYSMEM_FALLBACK=1` (RADV coopmat DeviceLost on Phoenix).
 
 CPU synthesis stays in the GUI worker thread.
 
@@ -117,8 +118,8 @@ Flatpak (Linux):
 
 GitHub Actions (`.github/workflows/`):
 
-- `ci.yml` — build Flatpak on `master` and pull requests (artifact only)
-- `release.yml` — on tag `v*` build the same bundle and attach it to a GitHub Release
+- `ci.yml` — build Linux Flatpak and unsigned macOS `.dmg` on `master` and pull requests (artifacts only)
+- `release.yml` — on tag `v*` build the same bundles and attach them to a GitHub Release
 
 Wheels are not in git. CI runs `pip download --dest flatpak/wheels 'PySide6==6.11.2'` before `flatpak-builder`.
 
@@ -144,5 +145,5 @@ flatpak run --command=python3 com.tagantank.ttser -c "from ttser.backends import
 - Pass multi-gigabyte ints through Qt `Signal(int, int)`
 - Show CUDA/Metal/Vulkan when the matching library is missing
 - Require reference text in the GUI
-- Commit `/lib/`, `repo/`, `.flatpak-builder/`, `*.flatpak`, `flatpak/wheels/`, `*.gguf`
+- Commit `/lib/`, `repo/`, `.flatpak-builder/`, `*.flatpak`, `flatpak/wheels/`, `*.gguf`, `*.dmg`
 - Treat `s2.cpp/` as gitignored source; it is a submodule gitlink

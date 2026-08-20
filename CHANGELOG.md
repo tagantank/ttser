@@ -5,6 +5,17 @@ All notable changes to ttser are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] — 2026-08-20
+
+### Added
+
+- Unsigned macOS `.app` / `.dmg` (Apple Silicon, CPU + Metal, bundled ffmpeg) built on GitHub Actions and attached to Releases
+- Frozen-app layout: bundled tokenizer, dictionaries, voices, and `libs2_*` dylibs; user models and extra voices under `~/Library/Application Support/ttser`
+
+### Changed
+
+- GPU synthesis in a packaged Mac app launches the bundled `ttser-synth` helper instead of `python -m engine.s2_synth`
+
 ## [0.4.0] — 2026-08-20
 
 ### Added
@@ -68,6 +79,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Linux Flatpak (`com.tagantank.ttser`, Freedesktop 24.08)
 - GitHub Actions CI on `master`/PRs and Release publishing on `v*` tags
 
+[0.5.0]: https://github.com/tagantank/ttser/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/tagantank/ttser/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/tagantank/ttser/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/tagantank/ttser/compare/v0.1.0...v0.2.0

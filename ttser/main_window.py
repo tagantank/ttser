@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from engine.runtime import default_output_mp3
 from engine.s2_voice import (
     DEFAULT_VOICE_ID,
     list_voice_ids,
@@ -65,7 +66,7 @@ class MainWindow(QMainWindow):
         layout.addLayout(top)
 
         mid = QHBoxLayout()
-        self.output_path = QLineEdit("output/result.mp3")
+        self.output_path = QLineEdit(default_output_mp3())
         self.lbl_output = QLabel()
         self.btn_output = QPushButton()
         self.btn_output.clicked.connect(self.pick_output)
@@ -170,7 +171,7 @@ class MainWindow(QMainWindow):
 
     def pick_output(self) -> None:
         path, _ = QFileDialog.getSaveFileName(
-            self, t("main.pick_output"), "output/result.mp3", "MP3 (*.mp3)"
+            self, t("main.pick_output"), default_output_mp3(), "MP3 (*.mp3)"
         )
         if path:
             self.output_path.setText(path)
