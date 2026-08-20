@@ -107,12 +107,19 @@ _CATALOG: dict[str, dict[str, str]] = {
         "voice_create.pick_audio": "Select reference audio",
         "dict.title": "Dictionaries",
         "dict.connected": "Connected dictionaries",
+        "dict.create": "Create dictionary",
         "dict.attach_json": "Attach JSON",
         "dict.detach": "Detach",
         "dict.add_row": "Add row",
         "dict.delete_row": "Delete row",
         "dict.save": "Save",
         "dict.pick_json": "Select dictionary JSON",
+        "dict.save_json": "Save dictionary JSON",
+        "dict.create_failed": "Could not create dictionary:\n{error}",
+        "dict.overwrite_title": "Overwrite?",
+        "dict.overwrite_message": (
+            "File {path} already exists. Overwrite?"
+        ),
         "dict.validation_error": "Dictionary error",
         "dict.unsaved_title": "Unsaved changes",
         "dict.unsaved_message": (
@@ -309,12 +316,19 @@ _CATALOG: dict[str, dict[str, str]] = {
         "voice_create.pick_audio": "Выберите reference-аудио",
         "dict.title": "Словари",
         "dict.connected": "Подключенные словари",
+        "dict.create": "Создать словарь",
         "dict.attach_json": "Подключить JSON",
         "dict.detach": "Отключить",
         "dict.add_row": "Добавить строку",
         "dict.delete_row": "Удалить строку",
         "dict.save": "Сохранить",
         "dict.pick_json": "Выбрать JSON словарь",
+        "dict.save_json": "Сохранить JSON словарь",
+        "dict.create_failed": "Не удалось создать словарь:\n{error}",
+        "dict.overwrite_title": "Перезаписать?",
+        "dict.overwrite_message": (
+            "Файл {path} уже существует. Перезаписать?"
+        ),
         "dict.validation_error": "Ошибка словаря",
         "dict.unsaved_title": "Несохраненные правки",
         "dict.unsaved_message": (

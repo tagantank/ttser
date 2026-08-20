@@ -15,9 +15,19 @@ permissions:
 
 jobs:
   macos:
-    name: macOS DMG
-    runs-on: macos-15
+    name: macOS DMG (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+            jobs: "3"
+          - runner: macos-15-intel
+            arch: x86_64
+            jobs: "4"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -39,14 +49,15 @@ jobs:
 
       - name: Build unsigned .app / .dmg
         env:
-          JOBS: "3"
+          JOBS: ${{ matrix.jobs }}
+          TTSER_ARCH: ${{ matrix.arch }}
         run: |
           source .venv/bin/activate
           bash macos/build_app.sh
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ttser-macos-arm64
+          name: ttser-macos-${{ matrix.arch }}
           path: |
             dist/ttser-*.dmg
             dist/ttser-*.dmg.sha256

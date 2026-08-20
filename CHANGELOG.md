@@ -5,6 +5,18 @@ All notable changes to ttser are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] — 2026-08-20
+
+### Added
+
+- Unsigned macOS Intel `.dmg` (`x86_64`) from GitHub Actions alongside the Apple Silicon build
+- **Create dictionary** in the Dictionaries dialog, writing a new JSON file (bundled apps use the user data directory)
+- Cursor skills for Fish Audio S2 Pro text prep (`ttser-s2-text-prep`) and a ChatGPT-oriented podcast brief (`ttser-s2-podcast-chatgpt`)
+
+### Changed
+
+- macOS CI and Release jobs build both `macos-arm64` and `macos-x86_64` packages
+
 ## [0.5.0] — 2026-08-20
 
 ### Added
@@ -79,6 +91,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Linux Flatpak (`com.tagantank.ttser`, Freedesktop 24.08)
 - GitHub Actions CI on `master`/PRs and Release publishing on `v*` tags
 
+[0.6.0]: https://github.com/tagantank/ttser/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/tagantank/ttser/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/tagantank/ttser/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/tagantank/ttser/compare/v0.2.0...v0.3.0

@@ -363,24 +363,25 @@ By default each synthesized line also gets **180 ms** of trailing silence before
 
 ## Packages
 
-GitHub Actions builds the Linux Flatpak and an unsigned macOS `.dmg` on `master`/PRs (CI artifacts) and publishes both to [Releases](https://github.com/tagantank/ttser/releases) on a `v*` tag:
+GitHub Actions builds the Linux Flatpak and unsigned macOS `.dmg` files (Apple Silicon and Intel) on `master`/PRs (CI artifacts) and publishes them to [Releases](https://github.com/tagantank/ttser/releases) on a `v*` tag:
 
 ```bash
-git tag v0.5.0
-git push origin v0.5.0
+git tag v0.6.0
+git push origin v0.6.0
 ```
 
 Release assets:
 
 - `ttser-<tag>-linux-x86_64.flatpak`
 - `ttser-<tag>-macos-arm64.dmg` (unsigned Apple Silicon `.app`)
+- `ttser-<tag>-macos-x86_64.dmg` (unsigned Intel `.app`)
 
 ```bash
-flatpak install --user --bundle ttser-v0.5.0-linux-x86_64.flatpak
+flatpak install --user --bundle ttser-v0.6.0-linux-x86_64.flatpak
 flatpak run com.tagantank.ttser
 ```
 
-The macOS DMG is not notarized. Drag `ttser.app` to Applications, then **Right-click → Open**. Models download in Settings into `~/Library/Application Support/ttser/models`.
+The macOS DMGs are not notarized. Use the file that matches the Mac (`arm64` or `x86_64`). Drag `ttser.app` to Applications, then **Right-click → Open**. Models download in Settings into `~/Library/Application Support/ttser/models`. Intel CPU synthesis is much slower; prefer Metal and `q4_k_m` there.
 
 Local macOS bundle (must run on Darwin):
 

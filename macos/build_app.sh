@@ -9,6 +9,10 @@ if [[ -z "${VERSION}" ]]; then
   VERSION="$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")"
 fi
 ARCH="$(uname -m)"
+if [[ -n "${TTSER_ARCH:-}" && "${ARCH}" != "${TTSER_ARCH}" ]]; then
+  echo "Refusing to package ${ARCH} (expected ${TTSER_ARCH})" >&2
+  exit 1
+fi
 JOBS="${JOBS:-$(sysctl -n hw.ncpu)}"
 PAYLOAD="${ROOT}/macos/payload"
 DIST="${ROOT}/dist"

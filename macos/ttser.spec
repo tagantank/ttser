@@ -9,7 +9,7 @@ from PyInstaller.utils.hooks import collect_submodules
 SPECDIR = Path(SPECPATH).resolve()
 REPO = SPECDIR.parent
 PAYLOAD = SPECDIR / "payload"
-VERSION = os.environ.get("TTSER_VERSION", "0.5.0")
+VERSION = os.environ.get("TTSER_VERSION", "0.6.0")
 
 binaries: list[tuple[str, str]] = []
 datas: list[tuple[str, str]] = [

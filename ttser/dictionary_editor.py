@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 
 from engine.pronunciation import Rule, load_rules, save_rules, validate_rules
 from ttser.i18n import t, translate_dict_validation_error
+from ttser.settings import user_dictionary_dir
 
 
 class DictionaryEditorDialog(QDialog):
@@ -42,10 +43,13 @@ class DictionaryEditorDialog(QDialog):
         left.addWidget(self.lbl_connected)
         left.addWidget(self.list_widget)
 
+        self.btn_create_file = QPushButton()
+        self.btn_create_file.clicked.connect(self._create_file)
         self.btn_add_file = QPushButton()
         self.btn_add_file.clicked.connect(self._add_file)
         self.btn_remove_file = QPushButton()
         self.btn_remove_file.clicked.connect(self._remove_file)
+        left.addWidget(self.btn_create_file)
         left.addWidget(self.btn_add_file)
         left.addWidget(self.btn_remove_file)
 
@@ -78,6 +82,7 @@ class DictionaryEditorDialog(QDialog):
     def retranslate(self) -> None:
         self.setWindowTitle(t("dict.title"))
         self.lbl_connected.setText(t("dict.connected"))
+        self.btn_create_file.setText(t("dict.create"))
         self.btn_add_file.setText(t("dict.attach_json"))
         self.btn_remove_file.setText(t("dict.detach"))
         self.btn_add_row.setText(t("dict.add_row"))
@@ -89,14 +94,59 @@ class DictionaryEditorDialog(QDialog):
     def _mark_dirty(self) -> None:
         self._dirty = True
 
+    def _create_file(self) -> None:
+        if self._dirty and not self._confirm_discard():
+            return
+        dest_dir = user_dictionary_dir()
+        try:
+            dest_dir.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            pass
+        suggested = dest_dir / "custom.json"
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            t("dict.save_json"),
+            str(suggested),
+            "JSON (*.json)",
+            options=QFileDialog.Option.DontConfirmOverwrite,
+        )
+        if not path:
+            return
+        if not path.lower().endswith(".json"):
+            path += ".json"
+        dest = Path(path)
+        if dest.exists():
+            answer = QMessageBox.question(
+                self,
+                t("dict.overwrite_title"),
+                t("dict.overwrite_message", path=dest.name),
+            )
+            if answer != QMessageBox.StandardButton.Yes:
+                return
+        try:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            save_rules(dest, [])
+        except OSError as exc:
+            QMessageBox.warning(self, t("main.error"), t("dict.create_failed", error=str(exc)))
+            return
+        self._dirty = False
+        self._attach_path(str(dest))
+
     def _add_file(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, t("dict.pick_json"), "", "JSON (*.json)")
         if not path:
             return
+        self._attach_path(path)
+
+    def _attach_path(self, path: str) -> None:
         if path not in self.dictionary_paths:
             self.dictionary_paths.append(path)
             self.list_widget.addItem(path)
-            self.list_widget.setCurrentRow(self.list_widget.count() - 1)
+        row = self.dictionary_paths.index(path)
+        if self.list_widget.currentRow() == row:
+            self._load_selected(row)
+        else:
+            self.list_widget.setCurrentRow(row)
 
     def _remove_file(self) -> None:
         row = self.list_widget.currentRow()

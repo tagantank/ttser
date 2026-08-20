@@ -118,7 +118,7 @@ Flatpak (Linux):
 
 GitHub Actions (`.github/workflows/`):
 
-- `ci.yml` — build Linux Flatpak and unsigned macOS `.dmg` on `master` and pull requests (artifacts only)
+- `ci.yml` — build Linux Flatpak and unsigned macOS `.dmg` files (arm64 and x86_64) on `master` and pull requests (artifacts only)
 - `release.yml` — on tag `v*` build the same bundles and attach them to a GitHub Release
 
 Wheels are not in git. CI runs `pip download --dest flatpak/wheels 'PySide6==6.11.2'` before `flatpak-builder`.
